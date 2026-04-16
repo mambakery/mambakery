@@ -1880,21 +1880,13 @@ function approvePayment(id) {
   renderPayments();
 
   // บันทึก status และ payment ลง GAS
+  // ✅ ไม่ส่ง deliveryItems เพื่อป้องกัน total ถูก overwrite กลับเป็นค่าเดิม
   const params = new URLSearchParams({
     action: 'updateOrder',
     token: currentUser?.token || '',
     orderId: id,
     status: 'paid',
     paymentMethod: o.payMethod || 'transfer',
-    deliveryItems: JSON.stringify(
-      (o.items || []).map(i => ({
-        id: i.id, name: i.name, price: i.price,
-        originalQty: i.originalQty || i.qty || 0,
-        deliveredQty: i.qty || 0,
-        returnedQty: 0,
-        isExtra: false,
-      }))
-    ),
   });
   fetch(`${GAS_URL}?${params}`)
     .then(r => r.json())
