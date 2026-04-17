@@ -218,6 +218,8 @@
     #printBillArea, #printBillArea * { visibility: visible; }
     #printBillArea { position: fixed; inset: 0; padding: 20px; background: white; font-size: 13px; font-family: 'Sarabun', sans-serif; }
     .nav, .sidebar, .cart-fab, .btn, .modal-overlay { display: none !important; }
+    /* ตัด header/footer ของ browser ออก (ชื่อหน้า, URL, เวลา) */
+    @page { margin: 0; size: A4; }
   }
   #printBillArea { display: none; }
   .bill-header { text-align:center; padding-bottom:10px; border-bottom:2px dashed #333; margin-bottom:12px; }
@@ -264,9 +266,9 @@
     <div style="margin-bottom:1rem;">
       <!-- เปลี่ยน src="" เป็น URL รูปภาพร้านได้เลย -->
       <img id="shopLogo" src="logo.png" alt="แหม่มเบเกอรี่"
-		style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.5);display:none;"
-		onload="this.style.display='block';document.getElementById('shopLogoEmoji').style.display='none';"
-		onerror="this.style.display='none';document.getElementById('shopLogoEmoji').style.display='block';">
+        style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.5);display:none;margin:0 auto;"
+        onload="this.style.display='block';document.getElementById('shopLogoEmoji').style.display='none';"
+        onerror="this.style.display='none';document.getElementById('shopLogoEmoji').style.display='block';">
       <div id="shopLogoEmoji" style="font-size:5rem;">🥐</div>
     </div>
     <h1 style="font-family:'Mitr',sans-serif;font-size:2.5rem;margin-bottom:0.5rem;">แหม่มเบเกอรี่</h1>
@@ -665,8 +667,8 @@
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="offlineBadge" style="font-size:0.72rem;font-weight:600;color:var(--success);">🟢 Online</span>
       <span style="font-size:0.85rem;color:var(--text-muted);" id="riderUserLabel"></span>
-      <button class="btn btn-secondary btn-sm" onclick="refreshRider()" title="โหลดข้อมูลใหม่">🔄</button>
-      <button class="btn btn-secondary btn-sm" onclick="doLogout()">ออก</button>
+      <button class="btn btn-secondary btn-sm" onclick="refreshRider()" title="โหลดข้อมูลใหม่">🔄 Refresh</button>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">ออกจากระบบ</button>
     </div>
   </nav>
   <div class="container" style="max-width:640px;">
