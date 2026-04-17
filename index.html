@@ -221,6 +221,7 @@
   }
   #printBillArea { display: none; }
   .bill-header { text-align:center; padding-bottom:10px; border-bottom:2px dashed #333; margin-bottom:12px; }
+  .bill-logo { width:90px; height:90px; border-radius:50%; object-fit:cover; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto; }
   .bill-title { font-size:18px; font-weight:700; font-family:'Mitr',sans-serif; }
   .bill-sub { font-size:12px; color:#555; margin-top:2px; }
   .bill-row { display:flex; justify-content:space-between; padding:3px 0; font-size:13px; }
@@ -262,10 +263,10 @@
   <div style="text-align:center;color:white;">
     <div style="margin-bottom:1rem;">
       <!-- เปลี่ยน src="" เป็น URL รูปภาพร้านได้เลย -->
-      <img id="shopLogo" src="" alt="แหม่มเบเกอรี่"
-        style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.5);display:none;"
-        onload="this.style.display='block';document.getElementById('shopLogoEmoji').style.display='none';"
-        onerror="this.style.display='none';document.getElementById('shopLogoEmoji').style.display='block';">
+      <img id="shopLogo" src="https://drive.google.com/uc?export=view&id=1BPAARlpnNjHtPLcqDoLYCTVd7SMvNVyq" alt="แหม่มเบเกอรี่"
+		style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,0.5);display:none;"
+		onload="this.style.display='block';document.getElementById('shopLogoEmoji').style.display='none';"
+		onerror="this.style.display='none';document.getElementById('shopLogoEmoji').style.display='block';">
       <div id="shopLogoEmoji" style="font-size:5rem;">🥐</div>
     </div>
     <h1 style="font-family:'Mitr',sans-serif;font-size:2.5rem;margin-bottom:0.5rem;">แหม่มเบเกอรี่</h1>
@@ -664,8 +665,8 @@
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="offlineBadge" style="font-size:0.72rem;font-weight:600;color:var(--success);">🟢 Online</span>
       <span style="font-size:0.85rem;color:var(--text-muted);" id="riderUserLabel"></span>
-      <button class="btn btn-secondary btn-sm" onclick="refreshRider()" title="โหลดข้อมูลใหม่">🔄 Refresh</button>
-      <button class="btn btn-secondary btn-sm" onclick="doLogout()">ออกจากระบบ</button>
+      <button class="btn btn-secondary btn-sm" onclick="refreshRider()" title="โหลดข้อมูลใหม่">🔄</button>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">ออก</button>
     </div>
   </nav>
   <div class="container" style="max-width:640px;">
@@ -1880,7 +1881,7 @@ function approvePayment(id) {
   renderPayments();
 
   // บันทึก status และ payment ลง GAS
-  // ✅ ไม่ส่ง deliveryItems เพื่อป้องกัน total ถูก overwrite กลับเป็นค่าเดิม
+  // ✅ FIX: ไม่ส่ง deliveryItems เพื่อป้องกัน total ถูก overwrite กลับเป็นค่าเดิม
   const params = new URLSearchParams({
     action: 'updateOrder',
     token: currentUser?.token || '',
@@ -2464,9 +2465,15 @@ function printBill(orderId) {
   const now = new Date().toLocaleString('th-TH');
   const itemsHtml = order.items.filter(i => i.qty > 0)
     .map(i => `<div class="bill-row"><span>${i.name} ×${i.qty}</span><span>฿${(i.price*i.qty).toLocaleString()}</span></div>`).join('');
+  // ดึง URL ของ logo จาก shopLogo img ถ้ามี
+  const logoSrc = document.getElementById('shopLogo')?.src || '';
+  const logoHtml = logoSrc
+    ? `<img src="${logoSrc}" class="bill-logo" alt="logo">`
+    : `<div style="font-size:3rem;margin-bottom:6px;">🥐</div>`;
   document.getElementById('printBillArea').innerHTML = `
     <div class="bill-header">
-      <div class="bill-title">🥐 ร้านแหม่มเบเกอรี่</div>
+      ${logoHtml}
+      <div class="bill-title">ร้านแหม่มเบเกอรี่</div>
       <div class="bill-sub">จำหน่ายปลีก-ส่ง คู่ชาวทุ่งสง</div>
       <div class="bill-sub">วันที่: ${now}</div>
     </div>
