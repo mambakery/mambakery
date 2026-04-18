@@ -399,7 +399,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">เบอร์โทรศัพท์ *</label>
-          <input class="form-control" id="custPhone" placeholder="0xx-xxx-xxxx" type="tel">
+          <input class="form-control" id="custPhone" placeholder="0xx-xxx-xxxx" type="tel" maxlength="10" inputmode="numeric">
         </div>
         <div class="form-group">
           <label class="form-label">หมายเหตุ</label>
@@ -1178,7 +1178,7 @@ function previewSlip(input) {
 
 function placeOrder() {
   const name = document.getElementById('custName').value.trim();
-  const phone = document.getElementById('custPhone').value.trim();
+  const phone = String(document.getElementById('custPhone').value.trim());
   const date = document.getElementById('deliveryDate').value;
   const method = document.getElementById('deliveryMethod').value;
   const payMethod = document.getElementById('paymentMethod').value;
