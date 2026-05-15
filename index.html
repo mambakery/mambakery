@@ -103,6 +103,8 @@
   .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--primary); background: transparent; color: var(--primary); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
   .qty-btn:hover { background: var(--primary); color: white; }
   .qty-display { font-weight: 600; min-width: 24px; text-align: center; }
+  .qty-input { width:52px; text-align:center; border:1.5px solid var(--border); border-radius:8px; padding:4px 0; font-size:1rem; font-family:'Sarabun',sans-serif; font-weight:600; color:var(--text); background:white; -moz-appearance:textfield; }
+  .qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
 
   .cart-fab { background: var(--primary); color: white; border: none; border-radius: 50px; padding: 8px 14px; font-family: 'Sarabun', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(212,133,74,0.4); display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
   .cart-fab:hover { background: var(--primary-dark); }
@@ -212,23 +214,104 @@
     .admin-content { padding: 1rem; }
   }
 
-  /* PRINT */
+  /* PRINT — แก้ปัญหาพิมพ์หลายชุด */
   @media print {
-    body * { visibility: hidden; }
-    #printBillArea, #printBillArea * { visibility: visible; }
-    #printBillArea { position: fixed; inset: 0; padding: 20px; background: white; font-size: 13px; font-family: 'Sarabun', sans-serif; }
-    .nav, .sidebar, .cart-fab, .btn, .modal-overlay { display: none !important; }
-    /* ตัด header/footer ของ browser ออก (ชื่อหน้า, URL, เวลา) */
-    @page { margin: 0; size: A4; }
+    /* ซ่อนทุกอย่างยกเว้นบิล โดยไม่ใช้ visibility:hidden
+       เพื่อป้องกัน fixed element ลอยซ้ำทุกหน้า */
+    body > *:not(#printBillArea) { display: none !important; }
+    .modal-overlay, .toast-container { display: none !important; }
+
+    #printBillArea {
+      display: block !important;
+      position: static !important;
+      width: 100%;
+      background: white;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* bill-wrap: อย่าบล็อก page-break เพราะบิลใหญ่ต้องไหลได้ */
+    .bill-wrap { width:100%; max-width:100%; padding:0; margin:0; }
+
+    /* Header + info ต้องอยู่หน้าเดียวกัน ไม่แยกหน้า */
+    .bill-header { page-break-inside:avoid; break-inside:avoid; page-break-after:avoid; break-after:avoid; }
+    .bill-info { page-break-inside:avoid; break-inside:avoid; page-break-before:avoid; break-before:avoid; }
+
+    /* แต่ละแถวในตาราง ไม่แตกกลางบรรทัด */
+    .bill-items tr { page-break-inside:avoid; break-inside:avoid; }
+    /* summary และ footer อยู่ด้วยกัน */
+    .bill-summary { page-break-inside:avoid; break-inside:avoid; }
+    .bill-footer { page-break-inside:avoid; break-inside:avoid; }
+
+    @page { size:A4 portrait; margin:15mm 15mm; }
   }
+  /* ===== BILL PRINT STYLES ===== */
   #printBillArea { display: none; }
-  .bill-header { text-align:center; padding-bottom:10px; border-bottom:2px dashed #333; margin-bottom:12px; }
-  .bill-logo { width:90px; height:90px; border-radius:50%; object-fit:cover; margin-bottom:8px; display:block; margin-left:auto; margin-right:auto; }
-  .bill-title { font-size:18px; font-weight:700; font-family:'Mitr',sans-serif; }
-  .bill-sub { font-size:12px; color:#555; margin-top:2px; }
+  #printBillArea * { box-sizing: border-box; }
+
+  .bill-wrap {
+    width:100%; max-width:700px; margin:0 auto;
+    font-family:'Sarabun',sans-serif; font-size:13px;
+    color:#1a1a1a; background:white; padding:14px 18px;
+  }
+  .bill-items tfoot td { font-size:12.5px; }
+
+  /* HEADER: โลโก้ซ้าย + ชื่อร้านขวา แนวนอน */
+  .bill-header {
+    display:flex; align-items:center; gap:10px;
+    padding-bottom:8px; margin-bottom:8px;
+    border-bottom:1.5px solid #333;
+  }
+  .bill-logo { width:62px; height:62px; border-radius:50%; object-fit:cover; flex-shrink:0; }
+  .bill-logo-emoji { font-size:2.2rem; flex-shrink:0; line-height:1; }
+  .bill-header-text { flex:1; }
+  .bill-title { font-size:16px; font-weight:700; font-family:'Mitr',sans-serif; line-height:1.2; margin-bottom:1px; }
+  .bill-sub { font-size:10.5px; color:#555; line-height:1.35; }
+
+  /* INFO TABLE */
+  .bill-info { width:100%; border-collapse:collapse; margin-bottom:6px; }
+  .bill-info td { padding:2px 0; font-size:11.5px; vertical-align:top; border-bottom:0.5px solid #eee; }
+  .bill-info tr:last-child td { border-bottom:none; }
+  .bill-info td:first-child { color:#555; width:24%; white-space:nowrap; }
+  .bill-info td:nth-child(2) { width:12px; padding:2px 3px; color:#555; }
+  .bill-info td:last-child { font-weight:500; word-break:break-word; }
+  .bill-info .bill-id-val { font-weight:700; color:#1a1a1a; font-size:11px; }
+
+  /* ITEMS TABLE */
+  .bill-items { width:100%; border-collapse:collapse; margin:5px 0; }
+  .bill-items thead tr { border-top:2px solid #333; border-bottom:1.5px solid #333; background:#f9f6f2; }
+  .bill-items th { padding:5px 3px; font-size:11px; font-weight:700; text-align:center; color:#5a3e28; }
+  .bill-items th:first-child { text-align:left; }
+  .bill-items th:last-child { text-align:right; }
+  .bill-items tbody tr { border-bottom:0.5px solid #e8e0d8; }
+  .bill-items tbody tr:last-child { border-bottom:1.5px solid #333; }
+  .bill-items td { padding:3.5px 3px; font-size:11.5px; vertical-align:middle; text-align:center; }
+  .bill-items td:first-child { text-align:left; }
+  .bill-items td:last-child { font-weight:700; text-align:right; }
+
+  /* SUMMARY */
+  .bill-summary { width:100%; border-collapse:collapse; margin-top:4px; }
+  .bill-summary td { padding:3px 3px; font-size:12px; }
+  .bill-summary td:last-child { text-align:right; font-weight:600; }
+  .bill-summary .bill-discount td { color:#c0392b; border-bottom:1px dashed #e74c3c; padding-bottom:4px; }
+  .bill-summary .bill-net td { border-top:2px solid #333; padding-top:5px; font-size:14px; font-weight:700; }
+
+  /* PAY & FOOTER */
+  .bill-pay-row { display:flex; justify-content:space-between; font-size:11.5px; color:#444; margin-top:5px; border-top:1px dashed #bbb; padding-top:4px; }
+  .bill-footer { text-align:center; margin-top:6px; padding-top:6px; border-top:1px dashed #aaa; font-size:11px; color:#666; }
+
   .bill-row { display:flex; justify-content:space-between; padding:3px 0; font-size:13px; }
-  .bill-total { display:flex; justify-content:space-between; padding:8px 0; font-size:16px; font-weight:700; border-top:2px dashed #333; margin-top:6px; }
-  .bill-footer { text-align:center; margin-top:12px; font-size:11px; color:#777; border-top:1px dashed #aaa; padding-top:8px; }
+
+  /* Reorder cards */
+  .reorder-card {
+    padding:10px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);
+    cursor:pointer;transition:all .15s;background:var(--bg);margin-bottom:6px;
+  }
+  .reorder-card:hover { border-color:var(--primary);background:var(--primary-light); }
+  .reorder-card.selected { border-color:var(--primary);background:var(--primary-light); box-shadow:0 0 0 2px rgba(212,97,23,.15); }
+  .reorder-date { font-size:0.78rem;color:var(--text-muted);margin-bottom:3px; }
+  .reorder-items { font-size:0.88rem;color:var(--text-primary);line-height:1.4; }
+  .reorder-total { font-size:0.95rem;font-weight:700;color:var(--primary);margin-top:4px; }
 
   /* OWNER CHART COLORS */
   .chart-bar { transition: opacity 0.2s; }
@@ -276,9 +359,61 @@
   </div>
   <div style="display:flex;flex-direction:column;gap:1rem;width:100%;max-width:320px;">
     <button class="btn btn-lg" style="background:white;color:var(--primary);font-weight:700;border-radius:50px;justify-content:center;" onclick="goTo('page-customer')">🛒 สั่งซื้อสินค้า</button>
+    <button class="btn btn-lg" style="background:rgba(255,255,255,0.9);color:var(--primary-dark);font-weight:700;border-radius:50px;justify-content:center;" onclick="openReorderModal()">🔄 สั่งซ้ำจากออเดอร์เดิม</button>
     <button class="btn btn-lg" style="background:rgba(255,255,255,0.15);color:white;border:2px solid rgba(255,255,255,0.4);border-radius:50px;justify-content:center;" onclick="goTo('page-login')">🔐 เข้าสู่ระบบ (สำหรับทีมงาน)</button>
   </div>
   <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;">© 2569 ร้านแหม่มเบเกอรี่ - ระบบจัดการร้าน</p>
+</div>
+
+<!-- ===== REORDER MODAL ===== -->
+<div class="modal-overlay" id="reorderModal" onclick="if(event.target===this)closeModal('reorderModal')">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">🔄 สั่งซ้ำจากออเดอร์เดิม</h3>
+      <button class="modal-close" onclick="closeModal('reorderModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step 1: กรอกเบอร์โทร -->
+      <div id="reorderStep1">
+        <p style="color:var(--text-muted);margin-bottom:1rem;font-size:0.9rem;">กรอกเบอร์โทรศัพท์เพื่อค้นหาประวัติออเดอร์ของคุณ</p>
+        <div class="form-group">
+          <label class="form-label">เบอร์โทรศัพท์ *</label>
+          <input class="form-control" id="reorderPhone" type="tel" maxlength="10" inputmode="numeric"
+            placeholder="0xx-xxx-xxxx" onkeydown="if(event.key==='Enter')searchReorderHistory()">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="searchReorderHistory()" id="reorderSearchBtn">
+          🔍 ค้นหาออเดอร์เดิม
+        </button>
+      </div>
+      <!-- Step 2: แสดงรายการออเดอร์ -->
+      <div id="reorderStep2" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <button onclick="document.getElementById('reorderStep2').style.display='none';document.getElementById('reorderStep1').style.display='block';"
+            style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.9rem;">← เปลี่ยนเบอร์</button>
+          <span style="font-size:0.85rem;color:var(--text-muted);">ออเดอร์ของเบอร์ <strong id="reorderPhoneDisplay"></strong></span>
+        </div>
+        <div id="reorderList"></div>
+      </div>
+
+      <!-- Step 3: แก้ไขรายการก่อนยืนยัน -->
+      <div id="reorderStep3" style="display:none;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <button onclick="backToReorderList()"
+            style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.9rem;">← เลือกออเดอร์อื่น</button>
+          <span style="font-size:0.85rem;color:var(--text-muted);">แก้ไขรายการก่อนสั่ง</span>
+        </div>
+        <div id="reorderEditList" style="display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;padding:2px;"></div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:9px 12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.9rem;color:var(--text-muted);">ยอดรวม (ประมาณ)</span>
+          <strong class="text-primary" id="reorderEditTotal" style="font-size:1.05rem;">฿0</strong>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" id="reorderFooter" style="display:none;">
+      <button class="btn btn-secondary" onclick="closeModal('reorderModal')">ปิด</button>
+      <button class="btn btn-primary" onclick="confirmReorder()">🛒 ใส่ตะกร้าและสั่ง</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== PAGE: LOGIN ===== -->
@@ -465,7 +600,7 @@
 <!-- ===== PAGE: ADMIN ===== -->
 <div id="page-admin" class="page">
   <nav class="nav">
-    <div class="nav-brand">🥐 Backoffice</div>
+    <div class="nav-brand">🥐 Back office</div>
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:0.85rem;color:var(--text-muted);" id="adminUserLabel"></span>
       <button class="btn btn-secondary btn-sm" onclick="refreshAdmin()" title="โหลดข้อมูลใหม่">🔄 Refresh</button>
@@ -475,7 +610,7 @@
   <div class="admin-layout">
     <!-- Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-logo">🥐 Backoffice</div>
+      <div class="sidebar-logo">🥐 Back office</div>
       <ul class="sidebar-nav">
         <li><a href="#" class="active" onclick="adminTab('dashboard', this)">📊 Dashboard</a></li>
         <li><a href="#" onclick="adminTab('orders', this)">📋 จัดการออเดอร์</a></li>
@@ -484,6 +619,7 @@
         <li><a href="#" onclick="adminTab('delivery-assign', this)">🚚 มอบหมายงานส่ง</a></li>
         <li><a href="#" onclick="adminTab('payments', this)">💳 ตรวจสอบชำระ</a></li>
         <li><a href="#" onclick="adminTab('reports', this)">📈 รายงาน</a></li>
+        <li><a href="#" onclick="adminTab('order-summary', this)">📑 สรุปออเดอร์</a></li>
       </ul>
     </div>
 
@@ -635,6 +771,26 @@
       </div>
 
       <!-- REPORTS -->
+      <!-- ORDER SUMMARY TAB -->
+      <div id="admin-order-summary" class="admin-tab hidden">
+        <div class="section-header" style="flex-wrap:wrap;gap:10px;">
+          <h2 class="section-title">📑 สรุปออเดอร์</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="loadOrdersForSummary()" style="gap:5px;">🔄 รีเฟรช</button>
+            <select class="form-control" id="summaryStatusFilter" style="width:auto;" onchange="renderOrderSummary()">
+              <option value="" selected>ทุกสถานะ</option>
+              <option value="delivered">ส่งแล้ว</option>
+              <option value="paid">ชำระแล้ว</option>
+              <option value="ready">พร้อมส่ง</option>
+              <option value="production">กำลังผลิต</option>
+            </select>
+            <input type="date" class="form-control" id="summaryDateFilter" style="width:auto;" onchange="renderOrderSummary()">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('summaryDateFilter').value='';renderOrderSummary()">ล้าง</button>
+          </div>
+        </div>
+        <div id="orderSummaryList"></div>
+      </div>
+
       <div id="admin-reports" class="admin-tab hidden">
         <div class="section-header">
           <h2 class="section-title">📈 รายงานยอดขาย</h2>
@@ -758,9 +914,15 @@
       <button class="modal-close" onclick="closeModal('orderModal')">✕</button>
     </div>
     <div class="modal-body" id="orderModalBody"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('orderModal')">ปิด</button>
-      <button class="btn btn-primary" id="orderStatusBtn" onclick="updateOrderStatus()">อัพเดทสถานะ</button>
+    <div class="modal-footer" style="justify-content:space-between;align-items:center;">
+      <button class="btn btn-secondary" onclick="printBill(currentOrderId)"
+        style="gap:6px;border-color:var(--text-muted);color:var(--text-muted);">
+        🖨️ พิมพ์บิล
+      </button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeModal('orderModal')">ปิด</button>
+        <button class="btn btn-primary" id="orderStatusBtn" onclick="updateOrderStatus()">อัพเดทสถานะ</button>
+      </div>
     </div>
   </div>
 </div>
@@ -832,7 +994,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // GAS API URL
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzMRwBUGEHQRwZgn5qeJWdA5Xc0kXR8kVg19lyW64ua077KwEzq6lll-QHzHhVGV08/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4LICBnx57LZy5EjRG7zFoudLuZeoXDffYm7h4apRUlaPairT8xr-UwcFhl_32Pxe9/exec'; // TODO: update after GAS deploy
 
 // =========================================
 // HELPER: แปลง Date object/string เป็น YYYY-MM-DD โดยใช้ local timezone (ไม่ใช่ UTC)
@@ -970,7 +1132,7 @@ function goTo(pageId) {
   if (pageId === 'page-admin') { loadOrders(); }
   if (pageId === 'page-rider') loadOrdersForRider();
   if (pageId === 'page-owner') loadOrdersForOwner();
-  if (pageId === 'page-customer') renderProducts();
+  if (pageId === 'page-customer') loadProductsForCustomer();
   if (pageId === 'page-checkout') renderCheckout();
 }
 
@@ -1053,7 +1215,9 @@ function renderProducts(catFilter = null) {
         <div class="product-price">฿${p.price}</div>
         <div class="product-qty">
           <button class="qty-btn" onclick="updateCart('${p.id}', -1, '${p.name}', ${p.price}, '${p.emoji}')">−</button>
-          <span class="qty-display" id="qdisp_${p.id}">${qty}</span>
+          <input class="qty-input" id="qdisp_${p.id}" type="number" min="0" value="${qty}"
+            onchange="setCartQty('${p.id}', this.value, '${p.name}', ${p.price}, '${p.emoji}')"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
           <button class="qty-btn" onclick="updateCart('${p.id}', 1, '${p.name}', ${p.price}, '${p.emoji}')">+</button>
         </div>
       </div>
@@ -1066,6 +1230,20 @@ function filterCategory(cat, el) {
   el.classList.add('active');
   currentCatFilter = cat;
   renderProducts(cat);
+}
+
+// ✅ พิมพ์จำนวนตรงๆ ได้
+function setCartQty(id, val, name, price, emoji) {
+  const qty = Math.max(0, parseInt(val) || 0);
+  if (qty === 0) {
+    delete cart[id];
+  } else {
+    if (!cart[id]) cart[id] = { id, name, price, emoji, qty: 0 };
+    cart[id].qty = qty;
+  }
+  updateCartUI();
+  const el = document.getElementById('qdisp_' + id);
+  if (el) el.value = qty > 0 ? qty : 0;
 }
 
 function updateCart(id, delta, name, price, emoji) {
@@ -1088,6 +1266,11 @@ function updateCartUI() {
   document.getElementById('cartBadge').textContent = count;
   document.getElementById('cartTotal').textContent = `฿${total.toLocaleString()}`;
   if (count > 0) { fab.classList.remove('hidden'); } else { fab.classList.add('hidden'); }
+  // ✅ sync ค่า qty ใน input บน product card
+  document.querySelectorAll('.qty-input').forEach(el => {
+    const id = el.id.replace('qdisp_', '');
+    el.value = cart[id]?.qty || 0;
+  });
 }
 
 function openCart() {
@@ -1251,12 +1434,15 @@ function adminTab(tab, el) {
   document.getElementById('admin-' + tab).classList.remove('hidden');
   document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
   if (el) el.classList.add('active');
+  // ✅ FIX: โหลดข้อมูลใหม่ทุกครั้งที่กด Dashboard เพื่อให้ตัวเลขอัปเดต
+  if (tab === 'dashboard') loadOrders();
   if (tab === 'orders') loadOrders();
-  if (tab === 'products') renderProducts_admin();
+  if (tab === 'products') loadProducts();
   if (tab === 'production') renderProduction();
   if (tab === 'delivery-assign') { renderAssign(); renderAssignHistory(); }
   if (tab === 'payments') loadOrdersForPayments();
   if (tab === 'reports') renderReport();
+  if (tab === 'order-summary') loadOrdersForSummary();
   return false;
 }
 
@@ -1316,9 +1502,10 @@ function renderAdminDashboard() {
 
   // ออเดอร์วันนี้ = สร้างวันนี้
   const todayOrders = DB.orders.filter(o => {
-    const d = new Date(o.createdAt);
-    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return dStr === todayStr;
+    // ✅ FIX: ตัดแค่ 10 ตัวแรก (YYYY-MM-DD) จาก createdAt แล้วเปรียบเทียบตรงๆ
+    // ไม่ใช้ new Date() เพราะมีปัญหา UTC offset ทำให้วันเลื่อน
+    const dateStr = (o.createdAt || '').substring(0, 10);
+    return dateStr === todayStr;
   });
   const todayRevenue = todayOrders.reduce((s, o) => s + (o.total || 0), 0);
 
@@ -1429,6 +1616,17 @@ function loadOrders() {
         customer: o.customerName,
         phone: o.customerPhone,
         total: parseFloat(o.total) || 0,
+        adminDiscount: parseFloat(o.adminDiscount) || 0,
+        deliveryItems: Array.isArray(o.deliveryItems) ? o.deliveryItems : null,
+        returnItems: Array.isArray(o.returnItems) ? o.returnItems.map(r => {
+          // ถ้า price = 0 (ข้อมูลเก่าไม่มี unitPrice) ให้หาจาก DB.products
+          let price = parseFloat(r.price || r.unitPrice) || 0;
+          if (!price && r.id) {
+            const prod = DB.products.find(p => p.id === r.id);
+            if (prod) price = prod.price || 0;
+          }
+          return { ...r, price };
+        }) : [],
         status: normalizeStatus(o.status),
         payMethod: normalizePayMethod(o.paymentMethod),
         deliveryDate: (() => {
@@ -1463,13 +1661,38 @@ function loadOrders() {
           id: i.productId || i.id,
           name: i.productName || i.name,
           qty: parseInt(i.quantity || i.qty) || 0,
+          originalQty: parseInt(i.quantity || i.qty) || 0,  // เก็บ qty เดิมที่ลูกค้าสั่ง
           price: parseFloat(i.unitPrice || i.price) || 0,
         })) : [],
       }));
       renderOrders();
       renderAdminDashboard();
+      // ถ้า summary tab กำลังแสดงอยู่ ให้ render ด้วย
+      const summaryTab = document.getElementById('admin-order-summary');
+      if (summaryTab && !summaryTab.classList.contains('hidden')) {
+        try { renderOrderSummary(); } catch(e) {
+          console.error('renderOrderSummary error:', e);
+          document.getElementById('orderSummaryList').innerHTML =
+            '<div class="text-center text-muted" style="padding:2rem;">เกิดข้อผิดพลาด: ' + e.message + '</div>';
+        }
+      }
     })
     .catch(err => showToast('โหลดออเดอร์ล้มเหลว', 'error'));
+}
+
+// โหลดข้อมูลสำหรับ "สรุปออเดอร์"
+// ใช้ loadOrders() เดิม (proven) — callback จะเรียก renderOrderSummary อัตโนมัติ
+// ถ้ามีข้อมูลใน DB.orders แล้ว render ทันที ไม่ต้องรอ fetch ใหม่
+function loadOrdersForSummary() {
+  if (!currentUser?.token) return;
+  if (DB.orders.length > 0) {
+    // มีข้อมูลแล้ว render ได้เลย แล้วค่อย refresh background
+    renderOrderSummary();
+    loadOrders(); // refresh อยู่เบื้องหลัง
+  } else {
+    // ยังไม่มีข้อมูล — โหลดก่อน
+    loadOrders();
+  }
 }
 
 function renderOrders() {
@@ -1561,9 +1784,27 @@ function viewOrder(id) {
     <div class="divider"></div>
     <div class="form-label mb-1">รายการสินค้า</div>
     <div class="items-list">
-      ${order.items.map(i => `<div class="item-row"><span>${i.name}</span><span>${i.qty} × ฿${i.price} = <strong>฿${(i.qty*i.price).toLocaleString()}</strong></span></div>`).join('')}
-      ${order.deliveryMethod === 'delivery' ? `<div class="item-row text-muted"><span>จัดส่งฟรี</span><span>฿0</span></div>` : ''}
-      <div class="item-row" style="border-top:1px solid var(--border);padding-top:6px;font-weight:700;"><span>รวม</span><span class="text-primary">฿${order.total.toLocaleString()}</span></div>
+      <div class="item-row" style="font-size:0.8rem;color:var(--text-muted);padding-bottom:4px;border-bottom:1px solid var(--border);margin-bottom:4px;">
+        <span>รายการ</span>
+        <span style="text-align:right;">จำนวน × หน่วยละ = ยอด</span>
+      </div>
+      ${order.items.filter(i=>i.qty>0).map(i =>
+        `<div class="item-row">
+          <span>${i.name}</span>
+          <span style="text-align:right;">${i.qty} × ฿${i.price.toLocaleString()} = <strong class="text-primary">฿${(i.qty*i.price).toLocaleString()}</strong></span>
+        </div>`).join('')}
+      ${order.deliveryMethod === 'delivery' ? `<div class="item-row" style="color:var(--success);font-size:0.88rem;"><span>จัดส่งฟรี</span><span>฿0</span></div>` : ''}
+      <div class="item-row" style="border-top:2px dashed var(--border);padding-top:8px;margin-top:4px;font-weight:700;font-size:1rem;">
+        <span>รวม</span><span class="text-primary">฿${order.items.filter(i=>i.qty>0).reduce((s,i)=>s+(i.qty*i.price),0).toLocaleString()}</span>
+      </div>
+      ${(order.items.filter(i=>i.qty>0).reduce((s,i)=>s+(i.qty*i.price),0)) > order.total ?
+        `<div class="item-row" style="color:var(--danger);font-size:0.9rem;">
+          <span>ส่วนลด</span>
+          <span>- ฿${(order.items.filter(i=>i.qty>0).reduce((s,i)=>s+(i.qty*i.price),0) - order.total).toLocaleString()}</span>
+        </div>
+        <div class="item-row" style="font-weight:700;font-size:1.05rem;color:var(--primary);">
+          <span>ยอดสุทธิ</span><span>฿${order.total.toLocaleString()}</span>
+        </div>` : ''}
     </div>
     <div class="form-group">
       <div class="form-label">สถานะปัจจุบัน</div>
@@ -1571,7 +1812,7 @@ function viewOrder(id) {
     </div>
     <div class="form-group">
       <div class="form-label">เปลี่ยนสถานะ</div>
-      <select class="form-control" id="newOrderStatus">
+      <select class="form-control" id="newOrderStatus" onchange="onStatusChange()">
         <option value="pending" ${order.status==='pending'?'selected':''}>รอตรวจสอบ</option>
         <option value="paid" ${order.status==='paid'?'selected':''}>ชำระแล้ว</option>
         <option value="production" ${order.status==='production'?'selected':''}>กำลังผลิต</option>
@@ -1579,30 +1820,123 @@ function viewOrder(id) {
         <option value="delivered" ${order.status==='delivered'?'selected':''}>ส่งแล้ว</option>
       </select>
     </div>
+    <!-- ✅ ส่วนลด แสดงเมื่อเลือก พร้อมส่ง -->
+    <div id="discountSection" style="display:${order.status==='ready'?'block':'none'};background:var(--primary-light);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;">
+      <div style="font-weight:700;color:var(--primary-dark);margin-bottom:10px;">🏷️ ให้ส่วนลด (ถ้ามี)</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+        <select class="form-control" id="discountType" style="width:140px;flex-shrink:0;" onchange="calcDiscount(${order.total})">
+          <option value="baht">฿ บาท</option>
+          <option value="percent">% เปอร์เซ็นต์</option>
+        </select>
+        <input class="form-control" id="discountValue" type="number" min="0" max="${order.total}" placeholder="0" oninput="calcDiscount(${order.total})" style="flex:1;">
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:0.9rem;color:var(--text-muted);">
+        <span>ยอดเดิม</span><span>฿${order.total.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:0.9rem;color:var(--danger);">
+        <span>ส่วนลด</span><span id="discountAmount">฿0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:1.15rem;font-weight:700;border-top:2px dashed #ccc;margin-top:6px;">
+        <span>ยอดสุทธิ</span><span id="finalTotal" style="color:var(--primary);">฿${order.total.toLocaleString()}</span>
+      </div>
+    </div>
   `;
   openModal('orderModal');
+}
+
+// ✅ แสดง/ซ่อน discount section เมื่อเปลี่ยนสถานะ
+function onStatusChange() {
+  const status = document.getElementById('newOrderStatus').value;
+  const sec = document.getElementById('discountSection');
+  if (sec) sec.style.display = status === 'ready' ? 'block' : 'none';
+  // reset discount เมื่อเปลี่ยนสถานะอื่น
+  if (status !== 'ready') {
+    const dv = document.getElementById('discountValue');
+    if (dv) dv.value = '';
+    const da = document.getElementById('discountAmount');
+    if (da) da.textContent = '฿0';
+  }
+}
+
+// ✅ คำนวณยอดหลังส่วนลด real-time
+function calcDiscount(originalTotal) {
+  const type = document.getElementById('discountType').value;
+  const val = parseFloat(document.getElementById('discountValue').value) || 0;
+  let discountAmt = 0;
+  if (type === 'baht') {
+    discountAmt = Math.min(val, originalTotal);
+  } else {
+    discountAmt = Math.min((val / 100) * originalTotal, originalTotal);
+  }
+  const finalAmt = originalTotal - discountAmt;
+  document.getElementById('discountAmount').textContent = '- ฿' + discountAmt.toLocaleString(undefined, {maximumFractionDigits:2});
+  document.getElementById('finalTotal').textContent = '฿' + finalAmt.toLocaleString(undefined, {maximumFractionDigits:2});
 }
 
 function updateOrderStatus() {
   const status = document.getElementById('newOrderStatus').value;
   const order = DB.orders.find(o => o.id === currentOrderId);
-  if (order) {
-    order.status = status;
-    closeModal('orderModal');
-    renderOrders();
-    showToast(`อัพเดทสถานะ ${currentOrderId} สำเร็จ`, 'success');
+  if (!order) return;
+
+  // ✅ คำนวณยอดหลังส่วนลด ถ้าเปลี่ยนเป็น "พร้อมส่ง"
+  let newTotal = order.total;
+  let discountAmt = 0;
+  if (status === 'ready') {
+    const type = document.getElementById('discountType')?.value || 'baht';
+    const val = parseFloat(document.getElementById('discountValue')?.value) || 0;
+    if (type === 'baht') {
+      discountAmt = Math.min(val, order.total);
+    } else {
+      discountAmt = Math.min((val / 100) * order.total, order.total);
+    }
+    newTotal = order.total - discountAmt;
   }
+
+  order.status = status;
+  if (discountAmt > 0) {
+    order.adminDiscount = (order.adminDiscount || 0) + discountAmt; // สะสมส่วนลด (กรณีอัปเดตซ้ำ)
+    order.total = newTotal;
+  }
+
+  closeModal('orderModal');
+  renderOrders();
+
+  // บันทึกลง GAS
+  const params = new URLSearchParams({
+    action: 'updateOrder',
+    token: currentUser?.token || '',
+    orderId: currentOrderId,
+    status,
+  });
+  // ✅ ถ้ามีส่วนลด ส่ง total ใหม่ไปอัปเดต Sheets ด้วย
+  if (discountAmt > 0) params.append('newTotal', newTotal);
+
+  fetch(`${GAS_URL}?${params}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        const msg = discountAmt > 0
+          ? `✅ พร้อมส่ง | ส่วนลด ฿${discountAmt.toLocaleString()} | ยอดสุทธิ ฿${newTotal.toLocaleString()}`
+          : `✅ อัพเดทสถานะ ${currentOrderId} สำเร็จ`;
+        showToast(msg, 'success');
+      } else {
+        showToast(`❌ ${res.error}`, 'error');
+      }
+    })
+    .catch(() => showToast('❌ ไม่สามารถเชื่อมต่อได้', 'error'));
 }
 
 // PRODUCTS
 function renderProducts_admin() {
   const search = (document.getElementById('productSearch')?.value || '').toLowerCase();
   const catFilter = document.getElementById('productCatFilter')?.value || '';
-  let products = DB.products.filter(p => {
-    const ms = !search || p.name.toLowerCase().includes(search);
-    const mc = !catFilter || p.category === catFilter;
-    return ms && mc;
-  });
+  let products = DB.products
+    .filter(p => {
+      const ms = !search || p.name.toLowerCase().includes(search);
+      const mc = !catFilter || p.category === catFilter;
+      return ms && mc;
+    })
+    .sort((a,b) => (a.id||'').localeCompare(b.id||'', undefined, {numeric:true}));
   const catNames = { filling: '🥐 ขนมปังไส้', cake: '🎂 เค้ก', piah: '🌸 เปี๊ยะ', donut: '🍩 โดนัท', thai: '🍘 ขนมไทย', bread: '🍞 ปังกรอบ', pie: '🥧 พาย' };
   document.getElementById('productTableBody').innerHTML = products.map(p => `
     <tr>
@@ -1659,24 +1993,106 @@ function saveProduct() {
   if (editingProductId) {
     const idx = DB.products.findIndex(p => p.id === editingProductId);
     if (idx !== -1) { DB.products[idx] = { ...DB.products[idx], name, price, stock, category, desc, emoji }; }
-    showToast('อัพเดทสินค้าสำเร็จ', 'success');
+    closeModal('productModal');
+    renderProducts_admin();
+
+    const params = new URLSearchParams({
+      action: 'updateProduct',
+      token: currentUser?.token || '',
+      id: editingProductId,
+      name, price, stock, category,
+      description: desc,
+      emoji,
+    });
+    fetch(`${GAS_URL}?${params}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) showToast('✅ อัพเดทสินค้าสำเร็จ', 'success');
+        else showToast('❌ บันทึกไม่สำเร็จ: ' + res.error, 'error');
+      })
+      .catch(() => showToast('❌ ไม่สามารถเชื่อมต่อได้', 'error'));
   } else {
-    DB.products.push({ id: 'P' + Date.now().toString().slice(-3), name, price, stock, category, desc, emoji, status: 'active' });
-    showToast('เพิ่มสินค้าสำเร็จ', 'success');
+    closeModal('productModal');
+    showToast('กำลังบันทึก...', 'info');
+
+    const params = new URLSearchParams({
+      action: 'createProduct',
+      token: currentUser?.token || '',
+      name, price, stock, category,
+      description: desc,
+      emoji,
+      status: 'active',
+    });
+    fetch(`${GAS_URL}?${params}`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          DB.products.push({ id: res.id, name, price, stock, category, desc, emoji, status: 'active' });
+          renderProducts_admin();
+          showToast('✅ เพิ่มสินค้าสำเร็จ', 'success');
+        } else showToast('❌ บันทึกไม่สำเร็จ: ' + res.error, 'error');
+      })
+      .catch(() => showToast('❌ ไม่สามารถเชื่อมต่อได้', 'error'));
   }
-  closeModal('productModal');
-  renderProducts_admin();
 }
 
 function toggleProduct(id) {
   const p = DB.products.find(x => x.id === id);
-  if (p) { p.status = p.status === 'active' ? 'inactive' : 'active'; renderProducts_admin(); showToast('อัพเดทสถานะสินค้าแล้ว', 'success'); }
+  if (!p) return;
+  const newStatus = p.status === 'active' ? 'inactive' : 'active';
+  p.status = newStatus; // optimistic update
+  renderProducts_admin();
+  showToast('กำลังบันทึก...', 'info');
+
+  // ส่ง fields ครบเพื่อให้ GAS Upsert ได้ (กรณีสินค้า hardcoded ยังไม่มีใน Sheets)
+  const params = new URLSearchParams({
+    action: 'updateProduct',
+    token: currentUser?.token || '',
+    id,
+    status: newStatus,
+    name: p.name,
+    price: p.price,
+    stock: p.stock,
+    category: p.category,
+    description: p.desc || '',
+    emoji: p.emoji || '\ud83c\udf70',
+  });
+  fetch(`${GAS_URL}?${params}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        showToast(`\u2705 ${newStatus === 'active' ? '\u0e40\u0e1b\u0e34\u0e14\u0e02\u0e32\u0e22' : '\u0e1b\u0e34\u0e14\u0e02\u0e32\u0e22'}\u0e2a\u0e34\u0e19\u0e04\u0e49\u0e32\u0e41\u0e25\u0e49\u0e27`, 'success');
+      } else {
+        // rollback ถ้า error
+        p.status = newStatus === 'active' ? 'inactive' : 'active';
+        renderProducts_admin();
+        showToast('\u274c \u0e1a\u0e31\u0e19\u0e17\u0e36\u0e01\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08: ' + res.error, 'error');
+      }
+    })
+    .catch(() => {
+      p.status = newStatus === 'active' ? 'inactive' : 'active';
+      renderProducts_admin();
+      showToast('\u274c \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e15\u0e48\u0e2d\u0e44\u0e14\u0e49', 'error');
+    });
 }
 
 function deleteProduct(id) {
   if (!confirm('ยืนยันการลบสินค้า?')) return;
   const idx = DB.products.findIndex(x => x.id === id);
-  if (idx !== -1) { DB.products.splice(idx, 1); renderProducts_admin(); showToast('ลบสินค้าแล้ว', 'success'); }
+  if (idx !== -1) { DB.products.splice(idx, 1); renderProducts_admin(); }
+
+  const params = new URLSearchParams({
+    action: 'deleteProduct',
+    token: currentUser?.token || '',
+    id,
+  });
+  fetch(`${GAS_URL}?${params}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) showToast('✅ ลบสินค้าแล้ว', 'success');
+      else showToast('❌ ลบไม่สำเร็จ: ' + res.error, 'error');
+    })
+    .catch(() => showToast('❌ ไม่สามารถเชื่อมต่อได้', 'error'));
 }
 
 // PRODUCTION PLAN
@@ -1816,6 +2232,17 @@ function loadOrdersForPayments() {
         customer: o.customerName,
         phone: o.customerPhone,
         total: parseFloat(o.total) || 0,
+        adminDiscount: parseFloat(o.adminDiscount) || 0,
+        deliveryItems: Array.isArray(o.deliveryItems) ? o.deliveryItems : null,
+        returnItems: Array.isArray(o.returnItems) ? o.returnItems.map(r => {
+          // ถ้า price = 0 (ข้อมูลเก่าไม่มี unitPrice) ให้หาจาก DB.products
+          let price = parseFloat(r.price || r.unitPrice) || 0;
+          if (!price && r.id) {
+            const prod = DB.products.find(p => p.id === r.id);
+            if (prod) price = prod.price || 0;
+          }
+          return { ...r, price };
+        }) : [],
         status: normalizeStatus(o.status),
         payMethod: normalizePayMethod(o.paymentMethod),
         deliveryDate: o.deliveryDate ? o.deliveryDate.split('T')[0] : '',
@@ -1957,6 +2384,102 @@ function setRiderDate(daysOffset) {
   renderRiderPage();
 }
 
+// =========================================
+// โหลดสินค้าจาก GAS (แก้ bug: status ไม่ถูก save)
+// =========================================
+// โหลดสินค้าสำหรับลูกค้า — รอ GAS ก่อนแสดงเสมอ (ป้องกัน inactive แสดงก่อน)
+function loadProductsForCustomer() {
+  // แสดง loading skeleton ก่อน ไม่ render hardcoded (ซึ่งทุกตัว active)
+  const grid = document.getElementById('productGrid');
+  if (grid) grid.innerHTML = `
+    <div style="grid-column:1/-1;text-align:center;padding:3rem 0;color:var(--text-muted);">
+      <div style="font-size:2rem;margin-bottom:8px;">⏳</div>
+      <div>กำลังโหลดรายการสินค้า...</div>
+    </div>`;
+
+  const token = currentUser?.token || '';
+  const url = token
+    ? `${GAS_URL}?action=getProducts&token=${encodeURIComponent(token)}`
+    : `${GAS_URL}?action=getProducts`;
+
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      if (!Array.isArray(data) || !data.length) {
+        // GAS ไม่มีข้อมูล → fallback hardcoded แต่แจ้งเตือน
+        renderProducts();
+        return;
+      }
+
+      // *** ขั้นตอนสำคัญ: set ทุก hardcoded product เป็น inactive ก่อน ***
+      // แล้วค่อย set active ตาม GAS จริงๆ
+      DB.products.forEach(p => { p.status = 'inactive'; });
+
+      // อัปเดตจาก GAS
+      data.forEach(p => {
+        const status  = (p.status  || 'active').toLowerCase();
+        const deleted = p.deleted === true || String(p.deleted).toUpperCase() === 'TRUE';
+        if (deleted) return; // ข้ามที่ถูกลบ
+
+        const idx = DB.products.findIndex(x => x.id === p.id);
+        if (idx !== -1) {
+          DB.products[idx].status = status;
+          DB.products[idx].price  = parseFloat(p.price)  || DB.products[idx].price;
+          DB.products[idx].emoji  = p.emoji  || DB.products[idx].emoji;
+          DB.products[idx].name   = p.name   || DB.products[idx].name;
+          DB.products[idx].desc   = p.description || DB.products[idx].desc || '';
+        } else if (status === 'active') {
+          // สินค้าใหม่จาก admin (เช่น E06, Z01)
+          DB.products.push({
+            id:       p.id,
+            name:     p.name,
+            price:    parseFloat(p.price) || 0,
+            stock:    parseInt(p.stock)   || 0,
+            category: p.category          || 'filling',
+            desc:     p.description || p.desc || '',
+            emoji:    p.emoji             || '🍰',
+            status:   'active',
+          });
+        }
+      });
+
+      renderProducts(); // render ด้วย status จริงจาก GAS
+    })
+    .catch(() => {
+      // offline fallback: แสดง hardcoded ทั้งหมด
+      DB.products.forEach(p => { p.status = 'active'; });
+      renderProducts();
+    });
+}
+
+function loadProducts() {
+  if (!currentUser?.token) { renderProducts_admin(); return; }
+  fetch(`${GAS_URL}?action=getProducts&token=${encodeURIComponent(currentUser.token)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        // merge: ใช้ข้อมูลจาก GAS เป็นหลัก, fallback hardcoded ถ้ายังไม่มีใน Sheets
+        data.forEach(p => {
+          const idx = DB.products.findIndex(x => x.id === p.id);
+          const mapped = {
+            id: p.id,
+            name: p.name,
+            price: parseFloat(p.price) || 0,
+            stock: parseInt(p.stock) || 0,
+            category: p.category || 'filling',
+            desc: p.description || p.desc || '',
+            emoji: p.emoji || '🍰',
+            status: (p.status || 'active').toLowerCase(),
+          };
+          if (idx !== -1) DB.products[idx] = { ...DB.products[idx], ...mapped };
+          else DB.products.push(mapped);
+        });
+      }
+      renderProducts_admin();
+    })
+    .catch(() => renderProducts_admin()); // fallback to hardcoded if offline
+}
+
 function loadUsers() {
   if (!currentUser?.token) return;
   fetch(`${GAS_URL}?action=getUsers&token=${encodeURIComponent(currentUser.token)}`)
@@ -1987,6 +2510,17 @@ function loadOrdersForRider() {
         customer: o.customerName,
         phone: o.customerPhone,
         total: parseFloat(o.total) || 0,
+        adminDiscount: parseFloat(o.adminDiscount) || 0,
+        deliveryItems: Array.isArray(o.deliveryItems) ? o.deliveryItems : null,
+        returnItems: Array.isArray(o.returnItems) ? o.returnItems.map(r => {
+          // ถ้า price = 0 (ข้อมูลเก่าไม่มี unitPrice) ให้หาจาก DB.products
+          let price = parseFloat(r.price || r.unitPrice) || 0;
+          if (!price && r.id) {
+            const prod = DB.products.find(p => p.id === r.id);
+            if (prod) price = prod.price || 0;
+          }
+          return { ...r, price };
+        }) : [],
         status: normalizeStatus(o.status),
         payMethod: normalizePayMethod(o.paymentMethod),
         deliveryDate: (() => {
@@ -2109,6 +2643,26 @@ function openDeliveryModal(id) {
   selectedDeliveryId = id;
   // เก็บ originalQty ครั้งแรกที่เปิด modal
   order.items.forEach(i => { if (i.originalQty === undefined) i.originalQty = i.qty; });
+
+  // ===== คำนวณ adminDiscount ===================================
+  // เก็บ _originalTotal ครั้งเดียวตอนเปิด modal ครั้งแรกเท่านั้น
+  // (order.total อาจถูก recalcRiderTotal เปลี่ยนแล้วหลังจาก rider แก้รายการ)
+  if (order._originalTotal === undefined) {
+    order._originalTotal = order.total; // บันทึกยอดจาก Sheets (ที่ admin set ไว้)
+  }
+  {
+    // rawItemsSum: ใช้ originalQty เท่านั้น (ไม่นับ extra ที่ rider เพิ่ม)
+    const rawItemsSum = order.items.reduce(
+      (s, i) => s + i.price * (i.originalQty || 0), 0
+    );
+    // implied discount = ยอดสินค้าเดิม - ยอดที่ admin set (หลังหักส่วนลดแล้ว)
+    const implied = rawItemsSum - order._originalTotal;
+    if (implied > 0.5) {
+      order.adminDiscount = Math.round(implied);
+    } else {
+      order.adminDiscount = order.adminDiscount || 0;
+    }
+  }
   document.getElementById('deliveryModalTitle').textContent = `📋 จัดการออเดอร์ ${order.id}`;
   document.getElementById('deliveryModalBody').innerHTML = `
     <div style="background:var(--primary-light);padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:1rem;font-size:0.88rem;">
@@ -2138,12 +2692,46 @@ function openDeliveryModal(id) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <select class="form-control" id="extraProductSelect" style="flex:2;min-width:160px;font-size:0.85rem;">
           <option value="">-- เลือกสินค้า --</option>
-          ${DB.products.filter(p => p.status === 'active').map(p =>
-            `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}">${p.name} (฿${p.price})</option>`
-          ).join('')}
+          ${[...DB.products]
+            .filter(p => p.status === 'active')
+            .sort((a,b) => (a.id||'').localeCompare(b.id||'', undefined, {numeric:true}))
+            .map(p => `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}">${p.name} (฿${p.price})</option>`)
+            .join('')}
         </select>
         <input type="number" id="extraQty" class="form-control" value="1" min="1" style="width:64px;flex:none;">
         <button class="btn btn-primary btn-sm" onclick="addExtraItem('${id}')">เพิ่ม</button>
+      </div>
+    </div>
+    <div style="margin-top:0.75rem;">
+      <p class="form-label">➖ คืนสินค้านอกออเดอร์</p>
+      <div id="returnItemsEdit">
+        ${(order.returnItems||[]).map((item, idx) => `
+          <div class="flex-between" style="padding:6px 0;border-bottom:1px solid var(--border);" id="returnItem_${idx}">
+            <div style="flex:1;font-size:0.88rem;color:var(--danger);">
+              <div>↩ ${item.name}</div>
+              <div style="color:var(--text-muted);font-size:0.78rem;">คืน ฿${item.price}/ชิ้น</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button class="qty-btn" onclick="adjustReturnItem(${idx}, -1, '${id}')">−</button>
+              <span id="returnQty_${idx}" class="fw-bold" style="min-width:28px;text-align:center;">${item.qty}</span>
+              <button class="qty-btn" onclick="adjustReturnItem(${idx}, 1, '${id}')">+</button>
+              <button class="btn btn-sm btn-danger" style="padding:3px 8px;font-size:0.78rem;" onclick="removeReturnItem(${idx}, '${id}')">ลบ</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+        <select class="form-control" id="returnProductSelect" style="flex:2;min-width:160px;font-size:0.85rem;">
+          <option value="">-- เลือกสินค้าที่คืน --</option>
+          ${[...DB.products]
+            .filter(p => p.status === 'active')
+            .sort((a,b) => (a.id||'').localeCompare(b.id||'', undefined, {numeric:true}))
+            .map(p =>
+              `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}">${p.name} (฿${p.price})</option>`
+            ).join('')}
+        </select>
+        <input type="number" id="returnQtyInput" class="form-control" value="1" min="1" style="width:64px;flex:none;">
+        <button class="btn btn-sm" style="background:var(--danger);color:white;" onclick="addReturnItem('${id}')">คืน</button>
       </div>
     </div>
     <div class="divider"></div>
@@ -2154,8 +2742,33 @@ function openDeliveryModal(id) {
         <option value="transfer" ${order.payMethod==='transfer'?'selected':''}>🏦 โอนเงิน</option>
       </select>
     </div>
-    <div class="flex-between" style="background:var(--bg);padding:12px;border-radius:var(--radius-sm);font-size:1.05rem;">
-      <span>ยอดรวม</span><strong class="text-primary" id="riderTotal">฿${order.total.toLocaleString()}</strong>
+    <div style="background:var(--bg);padding:10px 12px;border-radius:var(--radius-sm);font-size:0.92rem;">
+      ${(() => {
+        const _iSum = order.items.reduce((s,i)=>s+i.price*Math.max(0,i.qty),0);
+        const _rSum = (order.returnItems||[]).reduce((s,i)=>s+i.price*i.qty,0);
+        const _disc = order.adminDiscount || 0;
+        const _net  = Math.max(0, _iSum - _rSum - _disc);
+        // อัปเดต order.total ให้ถูกต้องตอน render ด้วย
+        order.total = _net;
+        return `
+        <div class="flex-between" style="color:var(--text-muted);font-size:0.85rem;">
+          <span>ยอดสินค้า</span>
+          <span id="riderSumItems">฿${_iSum.toLocaleString()}</span>
+        </div>
+        ${_disc > 0 ? `
+        <div class="flex-between" style="color:var(--success);font-size:0.85rem;">
+          <span>ส่วนลดจาก admin</span>
+          <span id="riderSumDiscount">- ฿${_disc.toLocaleString()}</span>
+        </div>` : `<span id="riderSumDiscount" style="display:none"></span>`}
+        ${_rSum > 0 ? `
+        <div class="flex-between" style="color:var(--danger);font-size:0.85rem;">
+          <span>ยอดขนมคืน</span>
+          <span id="riderSumReturn">- ฿${_rSum.toLocaleString()}</span>
+        </div>` : `<span id="riderSumReturn" style="display:none"></span>`}
+        <div class="flex-between" style="font-size:1.05rem;border-top:1px dashed var(--border);margin-top:6px;padding-top:6px;">
+          <span>ยอดรวม</span><strong class="text-primary" id="riderTotal">฿${_net.toLocaleString()}</strong>
+        </div>`;
+      })()}
     </div>
   `;
   document.getElementById('deliveryModalFooter').innerHTML = `
@@ -2186,6 +2799,285 @@ function addExtraItem(orderId) {
   openDeliveryModal(orderId); // re-render modal
 }
 
+// ===== คืนสินค้านอกออเดอร์ =====
+function addReturnItem(orderId) {
+  const order = DB.orders.find(o => o.id === orderId);
+  const sel = document.getElementById('returnProductSelect');
+  const qtyInput = document.getElementById('returnQtyInput');
+  if (!sel.value || !order) { showToast('กรุณาเลือกสินค้าที่คืน', 'error'); return; }
+  const opt = sel.options[sel.selectedIndex];
+  const price = parseFloat(opt.dataset.price) || 0;
+  const name = opt.dataset.name;
+  const qty = parseInt(qtyInput.value) || 1;
+  if (!order.returnItems) order.returnItems = [];
+  // ถ้ามีรายการคืนนี้อยู่แล้ว ให้บวกจำนวน
+  const existing = order.returnItems.findIndex(i => i.id === sel.value);
+  if (existing !== -1) {
+    order.returnItems[existing].qty += qty;
+  } else {
+    order.returnItems.push({ id: sel.value, name, price, qty });
+  }
+  recalcRiderTotal(orderId);
+  openDeliveryModal(orderId); // re-render modal
+}
+
+function adjustReturnItem(idx, delta, orderId) {
+  const order = DB.orders.find(o => o.id === orderId);
+  if (!order || !order.returnItems) return;
+  order.returnItems[idx].qty = Math.max(1, order.returnItems[idx].qty + delta);
+  const el = document.getElementById('returnQty_' + idx);
+  if (el) el.textContent = order.returnItems[idx].qty;
+  recalcRiderTotal(orderId);
+}
+
+function removeReturnItem(idx, orderId) {
+  const order = DB.orders.find(o => o.id === orderId);
+  if (!order || !order.returnItems) return;
+  order.returnItems.splice(idx, 1);
+  recalcRiderTotal(orderId);
+  openDeliveryModal(orderId);
+}
+
+
+// =========================================
+// สรุปออเดอร์ — เปรียบเทียบ original vs final
+// =========================================
+function renderOrderSummary() {
+  const statusFilter = document.getElementById('summaryStatusFilter')?.value || '';
+  const dateFilter   = document.getElementById('summaryDateFilter')?.value || '';
+  const el = document.getElementById('orderSummaryList');
+  if (!el) return;
+
+  let orders = DB.orders.filter(o => {
+    if (statusFilter && o.status !== statusFilter) return false;
+    if (dateFilter && (o.deliveryDate || '').slice(0,10) !== dateFilter) return false;
+    return true;
+  });
+
+  if (!orders.length) {
+    el.innerHTML = '<div class="text-center text-muted" style="padding:3rem;">ไม่มีรายการ</div>';
+    return;
+  }
+
+  el.innerHTML = orders.map(order => {
+    // --- Original items (original customer order, from ORDER_ITEMS sheet) ---
+    const origItems = order.items.filter(i => (i.originalQty || i.qty) > 0);
+    const origSum   = origItems.reduce((s, i) => s + i.price * (i.originalQty || i.qty), 0);
+    // ใช้ adminDiscount จาก GAS (บันทึกไว้เมื่อ updateOrder)
+    const adminDisc = order.adminDiscount || 0;
+    const origTotal = origSum - adminDisc;  // ยอดที่ admin ตั้งไว้
+
+    // --- Final delivery items (DELIVERY_ITEMS sheet — ที่ rider ส่งจริง) ---
+    const hasFinalItems = order.deliveryItems && order.deliveryItems.length > 0;
+    // fallback: ออเดอร์ที่ส่งแล้วแต่ไม่มี DELIVERY_ITEMS → ใช้ order.items เดิม
+    const isDelivered = ['delivered', 'paid'].includes(order.status);
+    const usingFallback = !hasFinalItems && isDelivered;
+    const finalItems = hasFinalItems
+      ? order.deliveryItems.filter(i => i.qty > 0)
+      : (isDelivered ? order.items.filter(i => i.qty > 0) : []);
+    const finalSum   = finalItems.reduce((s, i) => s + i.price * i.qty, 0);
+    // resolve price ที่อาจ = 0 จาก DB.products (ข้อมูลเก่าใน RETURNS sheet)
+    const returnItems = (order.returnItems || []).map(r => {
+      if (!r.price && r.id) {
+        const prod = DB.products.find(p => p.id === r.id);
+        return { ...r, price: prod ? prod.price || 0 : 0 };
+      }
+      return r;
+    });
+    const returnSum  = returnItems.reduce((s, i) => s + i.price * i.qty, 0);
+    const finalNet   = order.total;
+
+    // Badge: เปรียบเทียบรายการจริงที่ส่ง vs รายการที่ลูกค้าสั่ง
+    // คำนวณ realChange ก่อน (ต้องอยู่นอก if-else เพื่อให้ใช้ใน template ได้)
+    let realChange = false;
+    if (hasFinalItems) {
+      const deliveredQtyMap = {};
+      finalItems.forEach(i => { if (!i.isExtra) deliveredQtyMap[i.id] = (deliveredQtyMap[i.id]||0) + i.qty; });
+      const origQtyMap = {};
+      origItems.forEach(i => { origQtyMap[i.id] = (i.originalQty || i.qty); });
+      realChange = finalItems.some(i => i.isExtra)
+        || Object.keys(origQtyMap).some(id => origQtyMap[id] !== (deliveredQtyMap[id]||0))
+        || returnSum > 0;
+    }
+
+    let diffBadge;
+    if (!hasFinalItems && !isDelivered) {
+      diffBadge = `<span style="background:#f3f4f6;color:#6b7280;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;">⏳ รอข้อมูลการส่ง</span>`;
+    } else if (usingFallback) {
+      diffBadge = `<span style="background:#fff3cd;color:#856404;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;">📋 ข้อมูลจากใบสั่งเดิม</span>`;
+    } else {
+      diffBadge = realChange
+        ? `<span style="background:#fff3cd;color:#856404;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;">🔄 มีการแก้ไข</span>`
+        : `<span style="background:#d1fae5;color:#065f46;font-size:11px;padding:2px 8px;border-radius:999px;margin-left:6px;">✅ ตรงกัน</span>`;
+    }
+
+    return `
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <strong style="color:var(--primary);">${order.id}</strong>${diffBadge}
+          <span class="badge badge-${order.status}" style="margin-left:6px;">${statusLabel(order.status)}</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-muted);">
+          ${order.customer} | ${order.deliveryDate || ''} | ${order.deliveredAt ? 'ส่งแล้ว ' + order.deliveredAt : ''}
+        </div>
+      </div>
+      <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+        <!-- ===== บิล ORIGINAL ===== -->
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px;background:var(--bg);">
+          <div style="font-weight:600;font-size:0.85rem;color:var(--primary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>📋 บิลลูกค้าสั่ง + ส่วนลด admin</span>
+            <button class="btn btn-secondary btn-sm" style="font-size:0.78rem;padding:3px 10px;" onclick="printOriginalBill('${order.id}')">🖨️ พิมพ์</button>
+          </div>
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            <tr style="color:var(--text-muted);border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:3px 0;">รายการ</th><th style="text-align:center;">จำนวน</th><th style="text-align:right;">ยอด</th>
+            </tr>
+            ${origItems.map(i => `
+              <tr style="border-bottom:0.5px solid var(--border);">
+                <td style="padding:3px 0;font-size:11.5px;">${i.name}</td>
+                <td style="text-align:center;">${i.originalQty || i.qty}</td>
+                <td style="text-align:right;font-weight:600;">฿${(i.price*(i.originalQty||i.qty)).toLocaleString()}</td>
+              </tr>`).join('')}
+            <tr style="border-top:1px solid var(--border);">
+              <td colspan="2" style="padding-top:4px;font-size:11.5px;">รวม</td>
+              <td style="text-align:right;padding-top:4px;">฿${origSum.toLocaleString()}</td>
+            </tr>
+            ${order.deliveryMethod === 'delivery' ? '<tr><td colspan="2" style="color:var(--success);font-size:11px;">จัดส่งฟรี</td><td style="text-align:right;color:var(--success);">ฟรี</td></tr>' : ''}
+            ${adminDisc > 0 ? `<tr><td colspan="2" style="color:var(--danger);font-size:11.5px;">ส่วนลด admin</td><td style="text-align:right;color:var(--danger);">-฿${adminDisc.toLocaleString()}</td></tr>` : ''}
+            <tr><td colspan="2" style="font-weight:700;">ยอดสุทธิ</td><td style="text-align:right;font-weight:700;color:var(--primary);">฿${origTotal.toLocaleString()}</td></tr>
+          </table>
+        </div>
+
+        <!-- ===== บิล FINAL ===== -->
+        <div style="border:1px solid ${(hasFinalItems && realChange) ? '#fbbf24' : 'var(--border)'};border-radius:var(--radius);padding:12px;background:${(hasFinalItems && realChange) ? '#fffbeb' : 'var(--bg)'};">
+          <div style="font-weight:600;font-size:0.85rem;color:var(--success);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>✅ บิลสุดท้าย (หลังส่งจริง)</span>
+            <button class="btn btn-secondary btn-sm" style="font-size:0.78rem;padding:3px 10px;" onclick="printFinalBill('${order.id}')">🖨️ พิมพ์</button>
+          </div>
+          ${(!hasFinalItems && !isDelivered) ? `
+            <div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:12px;">
+              <div style="font-size:1.5rem;margin-bottom:6px;">⏳</div>
+              <div>ยังไม่ได้ส่งของ</div>
+            </div>
+          ` : `
+          ${usingFallback ? `<div style="font-size:10.5px;background:#fff3cd;color:#856404;padding:4px 8px;border-radius:4px;margin-bottom:6px;">⚠️ แสดงจากใบสั่งเดิม — บิลสุดท้ายอาจต่างกัน (Deploy GAS ใหม่เพื่อดูข้อมูลจริง)</div>` : ''}
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            <tr style="color:var(--text-muted);border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:3px 0;">รายการ</th>
+              <th style="text-align:center;padding:3px 2px;">จำนวน</th>
+              <th style="text-align:right;">ยอด</th>
+            </tr>
+            ${finalItems.map(i => `
+              <tr style="border-bottom:0.5px solid var(--border);${i.isExtra ? 'background:#f0fdf4;' : ''}">
+                <td style="padding:3px 0;font-size:11.5px;">
+                  ${i.isExtra ? '<span style="color:#16a34a;font-size:10px;">➕ เพิ่ม </span>' : ''}${i.name}
+                </td>
+                <td style="text-align:center;">${i.qty}</td>
+                <td style="text-align:right;font-weight:600;">฿${(i.price*i.qty).toLocaleString()}</td>
+              </tr>`).join('')}
+            ${returnItems.map(i => `
+              <tr style="color:var(--danger);border-bottom:0.5px solid var(--border);background:#fff5f5;">
+                <td style="padding:3px 0;font-size:11px;">↩ คืน: ${i.name}</td>
+                <td style="text-align:center;">${i.qty}</td>
+                <td style="text-align:right;">-฿${(i.price*i.qty).toLocaleString()}</td>
+              </tr>`).join('')}
+            ${order.deliveryMethod === 'delivery' ? '<tr><td colspan="2" style="font-size:11px;color:var(--success);">จัดส่งฟรี</td><td style="text-align:right;color:var(--success);">ฟรี</td></tr>' : ''}
+            <tr style="border-top:1px solid var(--border);">
+              <td colspan="2" style="padding-top:4px;font-size:11.5px;">รวม</td>
+              <td style="text-align:right;padding-top:4px;">฿${finalSum.toLocaleString()}</td>
+            </tr>
+            ${returnSum > 0 ? `<tr><td colspan="2" style="color:var(--danger);font-size:11.5px;">หักขนมคืน</td><td style="text-align:right;color:var(--danger);">-฿${returnSum.toLocaleString()}</td></tr>` : ''}
+            ${adminDisc > 0 ? `<tr><td colspan="2" style="color:var(--danger);font-size:11.5px;">ส่วนลด admin</td><td style="text-align:right;color:var(--danger);">-฿${adminDisc.toLocaleString()}</td></tr>` : ''}
+            <tr><td colspan="2" style="font-weight:700;">ยอดสุทธิ</td><td style="text-align:right;font-weight:700;color:var(--success);">฿${finalNet.toLocaleString()}</td></tr>
+          </table>
+          `}
+        </div>
+
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// พิมพ์บิล ORIGINAL (ที่ลูกค้าสั่ง + ส่วนลด admin)
+function printOriginalBill(orderId) {
+  const order = DB.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  const payLabel = (order.payMethod === 'cash' || order.payMethod === 'เงินสด') ? '💵 เงินสด' : '🏦 โอนเงิน';
+  const now = new Date().toLocaleString('th-TH');
+  const logoSrc = document.getElementById('shopLogo')?.src || '';
+  const logoHtml = (logoSrc && !logoSrc.endsWith('undefined') && !logoSrc.endsWith('/'))
+    ? `<img src="${logoSrc}" class="bill-logo" alt="logo">`
+    : `<div class="bill-logo-emoji">🥐</div>`;
+
+  // ใช้ originalQty เสมอ (รายการที่ลูกค้าสั่ง — จาก ORDER_ITEMS)
+  const origItems = order.items.filter(i => (i.originalQty || i.qty) > 0);
+  const origSum   = origItems.reduce((s, i) => s + i.price * (i.originalQty || i.qty), 0);
+  // ใช้ adminDiscount จาก GAS ที่ save ไว้แล้ว
+  const adminDisc = order.adminDiscount || 0;
+  const origTotal = origSum - adminDisc;
+
+  const deliveryLabel = order.deliveryMethod === 'delivery' ? '🚚 ส่งบ้าน' : '🏪 รับเอง';
+  const itemRowsHtml = origItems.map(i => `
+    <tr>
+      <td>${i.name}</td>
+      <td>${i.originalQty || i.qty}</td>
+      <td>฿${i.price.toLocaleString()}</td>
+      <td>฿${(i.price * (i.originalQty || i.qty)).toLocaleString()}</td>
+    </tr>`).join('');
+
+  document.getElementById('printBillArea').innerHTML = `
+  <div class="bill-wrap">
+    <div class="bill-header">
+      ${logoHtml}
+      <div class="bill-header-text">
+        <div class="bill-title">ร้านแหม่มเบเกอรี่</div>
+        <div class="bill-sub">จำหน่ายปลีก-ส่ง คู่ชาวทุ่งสง</div>
+        <div class="bill-sub">วันที่: ${now}</div>
+      </div>
+    </div>
+    <table class="bill-info">
+      <tr><td>เลขที่บิล</td><td>:</td><td><span class="bill-id-val">${order.id}</span></td></tr>
+      <tr><td>ลูกค้า</td><td>:</td><td>${order.customer || '-'}</td></tr>
+      <tr><td>โทร</td><td>:</td><td>${order.phone || '-'}</td></tr>
+      <tr><td>วิธีรับ</td><td>:</td><td>${deliveryLabel}</td></tr>
+      ${order.address ? `<tr><td>ที่อยู่</td><td>:</td><td>${order.address}</td></tr>` : ''}
+      ${order.deliveryDate ? `<tr><td>วันนัดส่ง</td><td>:</td><td>${(order.deliveryDate||'').slice(0,10)}</td></tr>` : ''}
+    </table>
+    <table class="bill-items">
+      <thead><tr><th>รายการ</th><th style="text-align:center;">จำนวน</th><th style="text-align:center;">หน่วยละ</th><th style="text-align:right;">จำนวนเงิน</th></tr></thead>
+      <tbody>
+        ${itemRowsHtml}
+        ${order.deliveryMethod === 'delivery' ? '<tr><td>จัดส่งฟรี</td><td>-</td><td>-</td><td style="color:#27ae60;">ฟรี</td></tr>' : ''}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #333;font-weight:700;background:#f9f6f2;">
+          <td style="padding:5px 3px;">รวมจำนวน</td>
+          <td style="text-align:center;padding:5px 3px;">${origItems.reduce((s,i)=>s+(i.originalQty||i.qty),0)}</td>
+          <td></td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <table class="bill-summary">
+      <tr><td>รวม</td><td>฿${origSum.toLocaleString()}</td></tr>
+      ${adminDisc > 0 ? `<tr class="bill-discount"><td>ส่วนลด</td><td>- ฿${adminDisc.toLocaleString()}</td></tr>` : ''}
+      <tr class="bill-net"><td>ยอดสุทธิ</td><td>฿${origTotal.toLocaleString()}</td></tr>
+    </table>
+    <div class="bill-pay-row"><span>ชำระโดย</span><span>${payLabel}</span></div>
+    <div class="bill-footer">ขอบคุณที่ใช้บริการ 🙏<br>แหม่มเบเกอรี่</div>
+  </div>`;
+
+  document.getElementById('printBillArea').style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    const hide = () => { document.getElementById('printBillArea').style.display = 'none'; };
+    window.addEventListener('afterprint', hide, { once: true });
+    setTimeout(hide, 3000);
+  }, 200);
+}
+
 function confirmDelivery(id) {
   const order = DB.orders.find(o => o.id === id);
   if (!order) return;
@@ -2212,7 +3104,10 @@ function confirmDelivery(id) {
     status: 'delivered',
     riderId: currentUser?.username || '',
     paymentMethod: payMethod,
+    newTotal: order.total,           // ยอดสุทธิหลังหักส่วนลด + หักขนมคืน
+    adminDiscount: order.adminDiscount || 0,
     deliveryItems: JSON.stringify(deliveryItems),
+    returnItems: JSON.stringify(order.returnItems || []),
   });
   fetch(`${GAS_URL}?${params}`)
     .then(r => r.json())
@@ -2250,10 +3145,31 @@ function returnRiderItem(idx, orderId) {
 function recalcRiderTotal(orderId) {
   const order = DB.orders.find(o => o.id === orderId);
   if (!order) return;
-  const total = order.items.reduce((s, i) => s + i.price * i.qty, 0);
-  order.total = total;
+
+  // ยอดสินค้า: ใช้ qty ปัจจุบัน (rider อาจเพิ่ม/ลด/คืน)
+  const itemsSum = order.items.reduce((s, i) => s + i.price * Math.max(0, i.qty), 0);
+
+  // ยอดขนมคืนนอกออเดอร์ (rider เพิ่ม return items)
+  const returnSum = (order.returnItems || []).reduce((s, i) => s + i.price * i.qty, 0);
+
+  // ส่วนลดที่ admin ใส่มา (ถูก derive ไว้ตอน openDeliveryModal แล้ว)
+  const adminDiscount = order.adminDiscount || 0;
+
+  // ยอดสุทธิ = ยอดสินค้า - ขนมคืน - ส่วนลด admin
+  const finalTotal = Math.max(0, itemsSum - returnSum - adminDiscount);
+  order.total = finalTotal;
+
+  // อัปเดต UI
   const el = document.getElementById('riderTotal');
-  if (el) el.textContent = '฿' + total.toLocaleString();
+  if (el) el.textContent = '฿' + finalTotal.toLocaleString();
+
+  // อัปเดต breakdown rows ถ้ามี
+  const elItems = document.getElementById('riderSumItems');
+  const elReturn = document.getElementById('riderSumReturn');
+  const elDiscount = document.getElementById('riderSumDiscount');
+  if (elItems) elItems.textContent = '฿' + itemsSum.toLocaleString();
+  if (elReturn) elReturn.textContent = '- ฿' + returnSum.toLocaleString();
+  if (elDiscount) elDiscount.textContent = '- ฿' + adminDiscount.toLocaleString();
 }
 
 function completeDelivery(id) {
@@ -2291,6 +3207,17 @@ function loadOrdersForOwner() {
         customer: o.customerName,
         phone: o.customerPhone,
         total: parseFloat(o.total) || 0,
+        adminDiscount: parseFloat(o.adminDiscount) || 0,
+        deliveryItems: Array.isArray(o.deliveryItems) ? o.deliveryItems : null,
+        returnItems: Array.isArray(o.returnItems) ? o.returnItems.map(r => {
+          // ถ้า price = 0 (ข้อมูลเก่าไม่มี unitPrice) ให้หาจาก DB.products
+          let price = parseFloat(r.price || r.unitPrice) || 0;
+          if (!price && r.id) {
+            const prod = DB.products.find(p => p.id === r.id);
+            if (prod) price = prod.price || 0;
+          }
+          return { ...r, price };
+        }) : [],
         status: normalizeStatus(o.status),
         payMethod: normalizePayMethod(o.paymentMethod),
         deliveryDate: o.deliveryDate ? o.deliveryDate.split('T')[0] : '',
@@ -2438,6 +3365,199 @@ function showToast(msg, type = 'success') {
 }
 
 // =========================================
+// REORDER FEATURE
+// =========================================
+let reorderSelectedId = null;
+let reorderOrders = [];
+
+function openReorderModal() {
+  reorderSelectedId = null;
+  reorderOrders = [];
+  reorderEditItems = [];
+  document.getElementById('reorderPhone').value = '';
+  document.getElementById('reorderStep1').style.display = 'block';
+  document.getElementById('reorderStep2').style.display = 'none';
+  document.getElementById('reorderStep3').style.display = 'none';
+  document.getElementById('reorderFooter').style.display = 'none';
+  openModal('reorderModal');
+  setTimeout(() => document.getElementById('reorderPhone').focus(), 300);
+}
+
+async function searchReorderHistory() {
+  const phone = String(document.getElementById('reorderPhone').value.trim());
+  if (phone.length < 9) { showToast('กรุณากรอกเบอร์โทรให้ครบ', 'error'); return; }
+
+  const btn = document.getElementById('reorderSearchBtn');
+  btn.textContent = '⏳ กำลังค้นหา...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${GAS_URL}?action=getOrdersByPhone&phone=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+
+    btn.textContent = '🔍 ค้นหาออเดอร์เดิม';
+    btn.disabled = false;
+
+    if (data.error || !Array.isArray(data) || data.length === 0) {
+      showToast('ไม่พบประวัติออเดอร์ของเบอร์นี้', 'error');
+      return;
+    }
+
+    // เรียงล่าสุดก่อน เอาแค่ 5 รายการ
+    // normalize items ทุก order ให้มี qty, id ที่ถูกต้อง
+    reorderOrders = data
+      .filter(o => Array.isArray(o.items) && o.items.length > 0)
+      .slice(0, 5)
+      .map(o => ({
+        ...o,
+        items: o.items.map(i => ({
+          id:    i.id || i.productId || '',
+          name:  i.name || i.productName || '',
+          qty:   parseInt(i.qty || i.quantity || i.deliveredQty) || 0,
+          price: parseFloat(i.price || i.unitPrice) || 0,
+          emoji: i.emoji || '🍰',
+        })).filter(i => i.id && i.qty > 0),
+      }))
+      .filter(o => o.items.length > 0);
+
+    document.getElementById('reorderPhoneDisplay').textContent = phone;
+    renderReorderList();
+    document.getElementById('reorderStep1').style.display = 'none';
+    document.getElementById('reorderStep2').style.display = 'block';
+
+  } catch(e) {
+    btn.textContent = '🔍 ค้นหาออเดอร์เดิม';
+    btn.disabled = false;
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
+  }
+}
+
+function renderReorderList() {
+  const list = document.getElementById('reorderList');
+  if (reorderOrders.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:1rem;">ไม่พบประวัติออเดอร์</p>';
+    return;
+  }
+  list.innerHTML = reorderOrders.map((o, idx) => {
+    const dateStr = (o.id || '').split('-').slice(0,2).join('-').replace('ORD-','') || o.deliveryDate || '';
+    const itemsSummary = (o.items || []).slice(0,3).map(i => `${i.name} ×${i.qty}`).join(', ')
+      + (o.items.length > 3 ? ` และอีก ${o.items.length - 3} รายการ` : '');
+    return `
+      <div class="reorder-card" id="reorderCard_${idx}" onclick="selectReorder(${idx})">
+        <div class="reorder-date">📅 ออเดอร์ ${o.id}</div>
+        <div class="reorder-items">${itemsSummary}</div>
+        <div class="reorder-total">฿${(o.total || 0).toLocaleString()}</div>
+      </div>`;
+  }).join('');
+}
+
+// reorderEditItems: working copy ที่ลูกค้าแก้ไขได้
+let reorderEditItems = [];
+
+function selectReorder(idx) {
+  reorderSelectedId = idx;
+  const order = reorderOrders[idx];
+  if (!order) return;
+
+  // ไปที่ Step 3: แสดง items พร้อมแก้ไขได้
+  // สร้าง working copy พร้อม resolve ราคาล่าสุด + กรองเฉพาะสินค้าที่ active
+  reorderEditItems = (order.items || [])
+    .map(item => ({
+      // normalize field names — GAS อาจส่งมาต่างกัน
+      id:    item.id       || item.productId || '',
+      name:  item.name     || item.productName || '',
+      qty:   parseInt(item.qty || item.quantity || item.deliveredQty) || 0,
+      price: parseFloat(item.price || item.unitPrice) || 0,
+      emoji: item.emoji || '🍰',
+    }))
+    .filter(item => item.id && item.qty > 0)
+    .map(item => {
+      const prod = DB.products.find(p => p.id === item.id);
+      return {
+        id:     item.id,
+        name:   prod ? prod.name  : item.name,
+        price:  prod ? prod.price : item.price,
+        emoji:  prod ? (prod.emoji || '🍰') : item.emoji,
+        qty:    item.qty,
+        active: prod ? prod.status === 'active' : true,
+      };
+    });
+
+  renderReorderEditStep();
+  document.getElementById('reorderStep2').style.display = 'none';
+  document.getElementById('reorderStep3').style.display = 'block';
+  document.getElementById('reorderFooter').style.display = 'flex';
+}
+
+function backToReorderList() {
+  document.getElementById('reorderStep3').style.display = 'none';
+  document.getElementById('reorderFooter').style.display = 'none';
+  document.getElementById('reorderStep2').style.display = 'block';
+}
+
+function renderReorderEditStep() {
+  const list = document.getElementById('reorderEditList');
+  const totalEl = document.getElementById('reorderEditTotal');
+
+  list.innerHTML = reorderEditItems.map((item, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);
+      background:${item.active ? 'var(--bg)' : '#f9f9f9'};
+      border:1px solid ${item.active ? 'var(--border)' : '#e0e0e0'};">
+      <span style="font-size:1.4rem;flex-shrink:0;">${item.emoji}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.88rem;font-weight:600;${!item.active ? 'color:var(--text-muted);' : ''}">${item.name}${!item.active ? ' <span style="font-size:10px;color:#999;">(ปิดขาย)</span>' : ''}</div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">฿${item.price}/ชิ้น</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <button class="qty-btn" style="width:28px;height:28px;" onclick="adjustReorderQty(${i}, -1)">−</button>
+        <input type="number" min="0" value="${item.qty}"
+          style="width:48px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:3px 4px;font-size:0.88rem;"
+          onchange="setReorderQty(${i}, this.value)">
+        <button class="qty-btn" style="width:28px;height:28px;" onclick="adjustReorderQty(${i}, 1)">+</button>
+        <button onclick="removeReorderItem(${i})"
+          style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:1rem;padding:2px 4px;">✕</button>
+      </div>
+    </div>
+  `).join('') || '<p style="text-align:center;color:var(--text-muted);padding:1rem;">ไม่มีรายการ</p>';
+
+  const total = reorderEditItems.reduce((s, i) => s + i.price * i.qty, 0);
+  if (totalEl) totalEl.textContent = '฿' + total.toLocaleString();
+}
+
+function adjustReorderQty(idx, delta) {
+  reorderEditItems[idx].qty = Math.max(0, (reorderEditItems[idx].qty || 0) + delta);
+  renderReorderEditStep();
+}
+
+function setReorderQty(idx, val) {
+  reorderEditItems[idx].qty = Math.max(0, parseInt(val) || 0);
+  renderReorderEditStep();
+}
+
+function removeReorderItem(idx) {
+  reorderEditItems.splice(idx, 1);
+  renderReorderEditStep();
+}
+
+function confirmReorder() {
+  const activeItems = reorderEditItems.filter(i => i.qty > 0);
+  if (!activeItems.length) { showToast('กรุณาเลือกอย่างน้อย 1 รายการ', 'error'); return; }
+
+  cart = {};
+  activeItems.forEach(item => {
+    cart[item.id] = { id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty: item.qty };
+  });
+
+  updateCartUI();
+  closeModal('reorderModal');
+  goTo('page-customer');
+
+  const count = activeItems.reduce((s, i) => s + i.qty, 0);
+  showToast(`✅ ใส่ตะกร้า ${count} ชิ้น แก้ไขได้ในตะกร้า`, 'success');
+  setTimeout(() => openCart(), 500);
+}
+
+// =========================================
 // INIT
 // =========================================
 document.addEventListener('DOMContentLoaded', () => {
@@ -2455,43 +3575,266 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // =========================================
-// ข้อ 2: PRINT BILL
+// พิมพ์บิลสุดท้าย (ใช้ deliveryItems จาก DELIVERY_ITEMS sheet)
+// =========================================
+function printFinalBill(orderId) {
+  const order = DB.orders.find(o => o.id === orderId);
+  if (!order) return;
+
+  // ถ้ายังไม่มี deliveryItems แสดง toast แจ้งเตือน
+  if (!order.deliveryItems || !order.deliveryItems.length) {
+    showToast('⏳ ยังไม่มีข้อมูลการส่งของ — ต้อง Deploy GAS ใหม่', 'error');
+    return;
+  }
+
+  const payLabel = (order.payMethod === 'cash' || order.payMethod === 'เงินสด') ? '💵 เงินสด' : '🏦 โอนเงิน';
+  const now = new Date().toLocaleString('th-TH');
+  const logoSrc = document.getElementById('shopLogo')?.src || '';
+  const logoHtml = (logoSrc && !logoSrc.endsWith('undefined') && !logoSrc.endsWith('/'))
+    ? `<img src="${logoSrc}" class="bill-logo" alt="logo">`
+    : `<div class="bill-logo-emoji">🥐</div>`;
+  const deliveryLabel = order.deliveryMethod === 'delivery' ? '🚚 ส่งบ้าน' : '🏪 รับเอง';
+
+  const finalItems  = order.deliveryItems.filter(i => i.qty > 0);
+  const returnItems = (order.returnItems || []).map(r => {
+    if (!r.price && r.id) {
+      const prod = DB.products.find(p => p.id === r.id);
+      return { ...r, price: prod ? prod.price || 0 : 0 };
+    }
+    return r;
+  });
+  const finalSum    = finalItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const returnSum   = returnItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const adminDisc   = order.adminDiscount || 0;
+  const netTotal    = order.total;
+
+  const itemRowsHtml = finalItems.map(i => `
+    <tr>
+      <td>${i.isExtra ? '➕ ' : ''}${i.name}</td>
+      <td>${i.qty}</td>
+      <td>฿${i.price.toLocaleString()}</td>
+      <td>฿${(i.price * i.qty).toLocaleString()}</td>
+    </tr>`).join('');
+  const returnRowsHtml = returnItems.map(i => `
+    <tr style="color:#c0392b;">
+      <td>↩ คืน: ${i.name}</td>
+      <td>${i.qty}</td>
+      <td>฿${i.price.toLocaleString()}</td>
+      <td>- ฿${(i.price * i.qty).toLocaleString()}</td>
+    </tr>`).join('');
+
+  document.getElementById('printBillArea').innerHTML = `
+  <div class="bill-wrap">
+    <div class="bill-header">
+      ${logoHtml}
+      <div class="bill-header-text">
+        <div class="bill-title">ร้านแหม่มเบเกอรี่</div>
+        <div class="bill-sub">จำหน่ายปลีก-ส่ง คู่ชาวทุ่งสง</div>
+        <div class="bill-sub">วันที่: ${now}</div>
+      </div>
+    </div>
+    <table class="bill-info">
+      <tr><td>เลขที่บิล</td><td>:</td><td><span class="bill-id-val">${order.id}</span></td></tr>
+      <tr><td>ลูกค้า</td><td>:</td><td>${order.customer||'-'}</td></tr>
+      <tr><td>โทร</td><td>:</td><td>${order.phone||'-'}</td></tr>
+      <tr><td>วิธีรับ</td><td>:</td><td>${deliveryLabel}</td></tr>
+      ${order.address ? `<tr><td>ที่อยู่</td><td>:</td><td>${order.address}</td></tr>` : ''}
+      ${order.deliveryDate ? `<tr><td>วันนัดส่ง</td><td>:</td><td>${(order.deliveryDate||'').slice(0,10)}</td></tr>` : ''}
+    </table>
+    <table class="bill-items">
+      <thead><tr>
+        <th>รายการ</th><th style="text-align:center;">จำนวน</th>
+        <th style="text-align:center;">หน่วยละ</th><th style="text-align:right;">จำนวนเงิน</th>
+      </tr></thead>
+      <tbody>
+        ${itemRowsHtml}
+        ${returnRowsHtml}
+        ${order.deliveryMethod === 'delivery' ? '<tr><td>จัดส่งฟรี</td><td>-</td><td>-</td><td style="color:#27ae60;">ฟรี</td></tr>' : ''}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #333;font-weight:700;background:#f9f6f2;">
+          <td style="padding:5px 3px;">รวมจำนวน</td>
+          <td style="text-align:center;padding:5px 3px;">${finalItems.reduce((s,i)=>s+i.qty,0)}</td>
+          <td></td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+    <table class="bill-summary">
+      <tr><td>รวม</td><td>฿${finalSum.toLocaleString()}</td></tr>
+      ${returnSum > 0 ? `<tr class="bill-discount"><td>หักขนมคืน</td><td>- ฿${returnSum.toLocaleString()}</td></tr>` : ''}
+      ${adminDisc > 0 ? `<tr class="bill-discount"><td>ส่วนลด</td><td>- ฿${adminDisc.toLocaleString()}</td></tr>` : ''}
+      <tr class="bill-net"><td>ยอดสุทธิ</td><td>฿${netTotal.toLocaleString()}</td></tr>
+    </table>
+    <div class="bill-pay-row"><span>ชำระโดย</span><span>${payLabel}</span></div>
+    <div class="bill-footer">ขอบคุณที่ใช้บริการ 🙏<br>แหม่มเบเกอรี่</div>
+  </div>`;
+
+  document.getElementById('printBillArea').style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    const hide = () => { document.getElementById('printBillArea').style.display = 'none'; };
+    window.addEventListener('afterprint', hide, { once: true });
+    setTimeout(hide, 3000);
+  }, 200);
+}
+
+// =========================================
+// ข้อ 2: PRINT BILL — ตาราง 4 คอลัมน์ พร้อมส่วนลด
 // =========================================
 function printBill(orderId) {
   const order = DB.orders.find(o => o.id === orderId);
   if (!order) return;
-  const deliveryFee = 0; // ส่งฟรี
-  const payEl = document.getElementById('riderPayMethod_' + orderId);
-  const payMethod = payEl ? payEl.value : (order.payMethod || 'cash');
+
+  // --- ดึง payMethod: ลอง rider dropdown ก่อน ถ้าไม่มีใช้ order.payMethod
+  const riderPayEl = document.getElementById('riderPayMethod_' + orderId);
+  const payMethod = riderPayEl ? riderPayEl.value : (order.payMethod || 'cash');
   const payLabel = payMethod === 'cash' ? '💵 เงินสด' : '🏦 โอนเงิน';
   const now = new Date().toLocaleString('th-TH');
-  const itemsHtml = order.items.filter(i => i.qty > 0)
-    .map(i => `<div class="bill-row"><span>${i.name} ×${i.qty}</span><span>฿${(i.price*i.qty).toLocaleString()}</span></div>`).join('');
-  // ดึง URL ของ logo จาก shopLogo img ถ้ามี
+
+  // logo
   const logoSrc = document.getElementById('shopLogo')?.src || '';
-  const logoHtml = logoSrc
+  const logoHtml = (logoSrc && !logoSrc.endsWith('undefined') && !logoSrc.endsWith('/'))
     ? `<img src="${logoSrc}" class="bill-logo" alt="logo">`
-    : `<div style="font-size:3rem;margin-bottom:6px;">🥐</div>`;
+    : `<div class="bill-logo-emoji">🥐</div>`;
+
+  // ยอดสินค้า: ใช้ qty ที่ส่งจริง (current qty)
+  const validItems = order.items.filter(i => i.qty > 0);
+  const itemsSubtotal = validItems.reduce((s, i) => s + (i.price * i.qty), 0);
+
+  // ยอดขนมคืนนอกออเดอร์
+  const returnItemsTotal = (order.returnItems || []).reduce((s, i) => s + i.price * i.qty, 0);
+
+  // ค่าจัดส่ง
+  const deliveryFee = 0;
+
+  // grossTotal = ยอดสินค้า + ค่าส่ง (ก่อนหักคืนและส่วนลด)
+  const grossTotal = itemsSubtotal + deliveryFee;
+
+  // ส่วนลด admin (derive จาก order.adminDiscount หรือคำนวณกลับ)
+  let adminDiscount = order.adminDiscount || 0;
+  if (!adminDiscount && order.total < grossTotal - returnItemsTotal) {
+    adminDiscount = Math.round(grossTotal - returnItemsTotal - order.total);
+  }
+
+  const netTotal = Math.max(0, grossTotal - returnItemsTotal - adminDiscount);
+
+  // แถวสินค้า
+  const itemRowsHtml = validItems.map(i => `
+    <tr>
+      <td>${i.name}</td>
+      <td>${i.qty}</td>
+      <td>฿${i.price.toLocaleString()}</td>
+      <td>฿${(i.price * i.qty).toLocaleString()}</td>
+    </tr>`).join('');
+
+  // แถวค่าจัดส่ง
+  const deliveryRowHtml = order.deliveryMethod === 'delivery'
+    ? `<tr><td>จัดส่งฟรี</td><td>-</td><td>-</td><td style="color:#27ae60;">ฟรี</td></tr>`
+    : '';
+
+  // แถวขนมคืนนอกออเดอร์
+  const returnRowsHtml = (order.returnItems || []).map(i =>
+    `<tr style="color:#c0392b;">
+      <td>↩ คืน: ${i.name}</td>
+      <td>${i.qty}</td>
+      <td>฿${i.price.toLocaleString()}</td>
+      <td>- ฿${(i.price * i.qty).toLocaleString()}</td>
+    </tr>`
+  ).join('');
+
+  // ส่วนลด row (แสดงในตารางรายการ - ลบออก ย้ายไปแสดงใน summary แทน)
+  const discountRowHtml = '';
+
+  // วิธีรับของ
+  const deliveryLabel = order.deliveryMethod === 'delivery' ? '🚚 ส่งบ้าน' : '🏪 รับเอง';
+
   document.getElementById('printBillArea').innerHTML = `
+  <div class="bill-wrap">
     <div class="bill-header">
       ${logoHtml}
-      <div class="bill-title">ร้านแหม่มเบเกอรี่</div>
-      <div class="bill-sub">จำหน่ายปลีก-ส่ง คู่ชาวทุ่งสง</div>
-      <div class="bill-sub">วันที่: ${now}</div>
+      <div class="bill-header-text">
+        <div class="bill-title">ร้านแหม่มเบเกอรี่</div>
+        <div class="bill-sub">จำหน่ายปลีก-ส่ง คู่ชาวทุ่งสง</div>
+        <div class="bill-sub">วันที่: ${now}</div>
+      </div>
     </div>
-    <div class="bill-row"><span>เลขที่บิล</span><span>${order.id}</span></div>
-    <div class="bill-row"><span>ลูกค้า</span><span>${order.customer}</span></div>
-    <div class="bill-row"><span>โทร</span><span>${order.phone}</span></div>
-    ${order.address ? `<div class="bill-row"><span>ที่อยู่</span><span style="max-width:55%;text-align:right;">${order.address}</span></div>` : ''}
-    <hr style="border:none;border-top:1px dashed #aaa;margin:8px 0;">
-    ${itemsHtml}
-    ${deliveryFee > 0 ? `<div class="bill-row text-muted"><span>ค่าจัดส่ง</span><span>฿50</span></div>` : ''}
-    <div class="bill-total"><span>ยอดรวม</span><span>฿${order.total.toLocaleString()}</span></div>
-    <div class="bill-row"><span>ชำระโดย</span><span>${payLabel}</span></div>
-    <div class="bill-footer">ขอบคุณที่ใช้บริการ 🙏<br>แหม่มเบเกอรี่</div>
-  `;
+
+    <table class="bill-info">
+      <tr>
+        <td>เลขที่บิล</td><td>:</td>
+        <td><span class="bill-id-val">${order.id}</span></td>
+      </tr>
+      <tr>
+        <td>ลูกค้า</td><td>:</td>
+        <td>${order.customer || '-'}</td>
+      </tr>
+      <tr>
+        <td>โทร</td><td>:</td>
+        <td>${order.phone || '-'}</td>
+      </tr>
+      <tr>
+        <td>วิธีรับ</td><td>:</td>
+        <td>${deliveryLabel}</td>
+      </tr>
+      ${order.address ? `<tr><td>ที่อยู่</td><td>:</td><td>${order.address}</td></tr>` : ''}
+      ${order.deliveryDate ? `<tr><td>วันนัดส่ง</td><td>:</td><td>${order.deliveryDate.split('T')[0]}</td></tr>` : ''}
+    </table>
+
+    <table class="bill-items">
+      <thead>
+        <tr>
+          <th>รายการ</th>
+          <th style="text-align:center;">จำนวน</th>
+          <th style="text-align:center;">หน่วยละ</th>
+          <th style="text-align:right;">จำนวนเงิน</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRowsHtml}
+        ${deliveryRowHtml}
+        ${returnRowsHtml}
+      </tbody>
+      <tfoot>
+        <tr style="border-top:2px solid #333;font-weight:700;background:#f9f6f2;">
+          <td style="padding:5px 3px;">รวมจำนวน</td>
+          <td style="text-align:center;padding:5px 3px;">${validItems.reduce((s,i)=>s+i.qty,0)}</td>
+          <td></td><td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <table class="bill-summary">
+      <tr>
+        <td>รวม</td>
+        <td>฿${grossTotal.toLocaleString()}</td>
+      </tr>
+      ${returnItemsTotal > 0 ? `<tr style="color:#c0392b;"><td>หักขนมคืน</td><td>- ฿${returnItemsTotal.toLocaleString()}</td></tr>` : ''}
+      ${adminDiscount > 0 ? `<tr class="bill-discount"><td>ส่วนลด</td><td>- ฿${adminDiscount.toLocaleString()}</td></tr>` : ''}
+      <tr class="bill-net">
+        <td>ยอดสุทธิ</td>
+        <td>฿${netTotal.toLocaleString()}</td>
+      </tr>
+    </table>
+
+    <div class="bill-pay-row">
+      <span>ชำระโดย</span>
+      <span>${payLabel}</span>
+    </div>
+
+    <div class="bill-footer">
+      ขอบคุณที่ใช้บริการ 🙏<br>แหม่มเบเกอรี่
+    </div>
+  </div>`;
+
   document.getElementById('printBillArea').style.display = 'block';
-  setTimeout(() => { window.print(); document.getElementById('printBillArea').style.display = 'none'; }, 100);
+  // รอ render เสร็จแล้วค่อย print — ซ่อนหลัง dialog ปิด
+  setTimeout(() => {
+    window.print();
+    // ซ่อนบิลทั้งใน afterprint event และ timeout fallback
+    const hide = () => { document.getElementById('printBillArea').style.display = 'none'; };
+    window.addEventListener('afterprint', hide, { once: true });
+    setTimeout(hide, 3000); // fallback ถ้า afterprint ไม่ fire
+  }, 200);
 }
 
 // =========================================
@@ -2507,6 +3850,7 @@ function completeDeliveryWithPayment(orderId) {
   order.deliveredBy = currentUser?.username || '';
   order.deliveredAt = new Date().toLocaleString('th-TH');
 
+  // ส่ง items ที่ rider แก้ไข (ถ้ามี) + returnItems นอกออเดอร์
   const deliveryItems = order.items.map(i => ({
     id: i.id, name: i.name, price: i.price,
     originalQty: i.originalQty || i.qty || 0,
@@ -2514,6 +3858,10 @@ function completeDeliveryWithPayment(orderId) {
     returnedQty: Math.max(0, (i.originalQty || 0) - i.qty),
     isExtra: i.isExtra || false,
   }));
+
+  // ===== สำคัญ: ส่ง newTotal เสมอ เพื่อป้องกัน GAS เขียนทับด้วย totalDelivered =====
+  // order.total ณ จุดนี้คือยอดที่ถูกต้องอยู่แล้ว (รวมส่วนลด admin ที่ load มาจาก Sheets)
+  const finalTotal = order.total;
 
   const label = payMethod === 'cash' ? '💵 เงินสด' : '🏦 โอนเงิน';
   const params = new URLSearchParams({
@@ -2523,12 +3871,15 @@ function completeDeliveryWithPayment(orderId) {
     status: 'delivered',
     riderId: currentUser?.username || '',
     paymentMethod: payMethod,
+    newTotal: finalTotal,                              // ✅ ป้องกัน GAS เขียนทับ
+    adminDiscount: order.adminDiscount || 0,
     deliveryItems: JSON.stringify(deliveryItems),
+    returnItems: JSON.stringify(order.returnItems || []),
   });
   fetch(`${GAS_URL}?${params}`)
     .then(r => r.json())
     .then(res => {
-      if (res.success) showToast(`✅ ส่งสำเร็จ — ${label} | รอ Admin ยืนยัน`, 'success');
+      if (res.success) showToast(`✅ ส่งสำเร็จ — ${label}`, 'success');
       else { order.status = 'ready'; renderRiderPage(); showToast(`⚠️ บันทึกไม่สำเร็จ: ${res.error}`, 'error'); }
     })
     .catch(() => showToast('📴 ไม่สามารถเชื่อมต่อได้', 'error'));
