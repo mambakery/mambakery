@@ -2397,59 +2397,10 @@ function loadProductsForCustomer() {
       <div>กำลังโหลดรายการสินค้า...</div>
     </div>`;
 
-  const token = currentUser?.token || '';
-  const url = token
-    ? `${GAS_URL}?action=getProducts&token=${encodeURIComponent(token)}`
-    : `${GAS_URL}?action=getProducts`;
-
-  fetch(url)
-    .then(r => r.json())
-    .then(data => {
-      if (!Array.isArray(data) || !data.length) {
-        // GAS ไม่มีข้อมูล → fallback hardcoded แต่แจ้งเตือน
-        renderProducts();
-        return;
-      }
-
-      // *** ขั้นตอนสำคัญ: set ทุก hardcoded product เป็น inactive ก่อน ***
-      // แล้วค่อย set active ตาม GAS จริงๆ
-      DB.products.forEach(p => { p.status = 'inactive'; });
-
-      // อัปเดตจาก GAS
-      data.forEach(p => {
-        const status  = (p.status  || 'active').toLowerCase();
-        const deleted = p.deleted === true || String(p.deleted).toUpperCase() === 'TRUE';
-        if (deleted) return; // ข้ามที่ถูกลบ
-
-        const idx = DB.products.findIndex(x => x.id === p.id);
-        if (idx !== -1) {
-          DB.products[idx].status = status;
-          DB.products[idx].price  = parseFloat(p.price)  || DB.products[idx].price;
-          DB.products[idx].emoji  = p.emoji  || DB.products[idx].emoji;
-          DB.products[idx].name   = p.name   || DB.products[idx].name;
-          DB.products[idx].desc   = p.description || DB.products[idx].desc || '';
-        } else if (status === 'active') {
-          // สินค้าใหม่จาก admin (เช่น E06, Z01)
-          DB.products.push({
-            id:       p.id,
-            name:     p.name,
-            price:    parseFloat(p.price) || 0,
-            stock:    parseInt(p.stock)   || 0,
-            category: p.category          || 'filling',
-            desc:     p.description || p.desc || '',
-            emoji:    p.emoji             || '🍰',
-            status:   'active',
-          });
-        }
-      });
-
-      renderProducts(); // render ด้วย status จริงจาก GAS
-    })
-    .catch(() => {
-      // offline fallback: แสดง hardcoded ทั้งหมด
-      DB.products.forEach(p => { p.status = 'active'; });
-      renderProducts();
-    });
+  // ✅ ใช้ syncProductStatusesFromGAS() ร่วมกับ rider — ดึง status จาก GAS แล้วค่อย render
+  syncProductStatusesFromGAS()
+    .then(() => renderProducts())
+    .catch(() => renderProducts());
 }
 
 function loadProducts() {
@@ -2498,8 +2449,51 @@ function loadUsers() {
     .catch(() => {});
 }
 
+function syncProductStatusesFromGAS() {
+  // ดึง status สินค้าจาก GAS มาอัปเดต DB.products
+  // เพื่อให้ dropdown ของ rider ไม่แสดงสินค้า inactive
+  return fetch(`${GAS_URL}?action=getProducts`)
+    .then(r => r.json())
+    .then(data => {
+      if (!Array.isArray(data) || !data.length) return;
+      // ตั้ง hardcoded ทุกตัวเป็น inactive ก่อน แล้วค่อยอัปเดตจาก GAS จริง
+      DB.products.forEach(p => { p.status = 'inactive'; });
+      data.forEach(p => {
+        const deleted = p.deleted === true || String(p.deleted).toUpperCase() === 'TRUE';
+        if (deleted) return;
+        const status = (p.status || 'active').toLowerCase();
+        const idx = DB.products.findIndex(x => x.id === p.id);
+        if (idx !== -1) {
+          DB.products[idx].status = status;
+          DB.products[idx].price  = parseFloat(p.price)  || DB.products[idx].price;
+          DB.products[idx].name   = p.name   || DB.products[idx].name;
+          DB.products[idx].emoji  = p.emoji  || DB.products[idx].emoji;
+        } else if (status === 'active') {
+          // สินค้าใหม่ที่ admin เพิ่ม (เช่น Z01, E06) แต่ยังไม่อยู่ใน hardcoded list
+          DB.products.push({
+            id: p.id, name: p.name,
+            price:    parseFloat(p.price) || 0,
+            stock:    parseInt(p.stock)   || 0,
+            category: p.category          || 'filling',
+            desc:     p.description || p.desc || '',
+            emoji:    p.emoji             || '🍰',
+            status:   'active',
+          });
+        }
+      });
+    })
+    .catch(() => {
+      // offline: fallback คืนค่า hardcoded ทั้งหมดเป็น active (พฤติกรรมเดิม)
+      DB.products.forEach(p => { p.status = 'active'; });
+    });
+}
+
 function loadOrdersForRider() {
   if (!currentUser?.token) return;
+
+  // ✅ อัปเดต status สินค้าจาก GAS ก่อน เพื่อให้ dropdown rider ไม่แสดง inactive
+  syncProductStatusesFromGAS();
+
   const url = `${GAS_URL}?action=getOrders&token=${encodeURIComponent(currentUser.token)}`;
   fetch(url)
     .then(r => r.json())
